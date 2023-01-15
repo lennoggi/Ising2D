@@ -7,19 +7,23 @@
 #define BETA 0.42
 
 // Full lattice size
-#define Lx 256
-#define Ly 256
+#define NX 256
+#define NY 256
 
 // Number of ranks along x and y
-#define Nx 4
-#define Ny 2
+#define N_PROCS_X 4
+#define N_PROCS_Y 4
 
 // Number of lattice updates to reach thermal equilibrium
 #define N_THERM 200000
 
-/* Number of lattice updates in which the expectation values of all the
+/* Number of lattice updates during which the expectation values of all the
  * observables are computed after reaching thermal equilibrium                  */
 #define N_CALC 2000000
 
+// Verbosity
+#define VERBOSE     true
+#define VERYVERBOSE true
 
-#endif PARAMETERS_HH
+
+#endif  // PARAMETERS_HH
