@@ -10,31 +10,35 @@
 constexpr inline double _2beta = 2.*BETA;
 
 // Process-local lattice size -- interior only
-constexpr inline int nx_local = NX/N_PROCS_X;
-constexpr inline int ny_local = NX/N_PROCS_X;
+constexpr inline int nxloc = NX/NPROCS_X;
+constexpr inline int nyloc = NY/NPROCS_Y;
 
 // Indices of the last ghost row and column on the process-local lattice
-constexpr inline int nx_local_p1 = nx_local + 1;
-constexpr inline int ny_local_p1 = ny_local + 1;
+constexpr inline int nxloc_p1 = nxloc + 1;
+constexpr inline int nyloc_p1 = nyloc + 1;
 
 // Process-local lattice size -- including ghosts
-constexpr inline int nx_local_p2 = nx_local + 2;
-constexpr inline int ny_local_p2 = ny_local + 2;
+constexpr inline int nxloc_p2 = nxloc + 2;
+constexpr inline int nyloc_p2 = nyloc + 2;
 
 // Size of the chunks of data to send to and receive from each process
-constexpr inline int nx_local_half = nx_local/2;
-constexpr inline int ny_local_half = ny_local/2;
+constexpr inline int nxloc_half = nxloc/2;
+constexpr inline int nyloc_half = nyloc/2;
+
+// Size of the full interior of the process-local lattice
+constexpr inline int nxloc_nyloc = nxloc*nyloc;
 
 
-// Function declarations
-void check_parameters(const int &N_procs);
+/* Function declarations
+ * --------------------- */
+void check_parameters(const int &nprocs);
 
-void update(const int        &right,
-            const int        &left,
-            const int        &up,
-            const int        &down,
-            const bool       &parity,
-            std::array<std::array<int, ny_local_p2>, nx_local_p2> &lattice);
+void update(const int  &right,
+            const int  &left,
+            const int  &up,
+            const int  &down,
+            const bool &parity,
+            std::array<std::array<int, nxloc_p2>, nyloc_p2> &local_lattice);
 
 
 #endif  // DECLARATIONS_HH

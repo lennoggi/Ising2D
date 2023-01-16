@@ -11,19 +11,23 @@
 #define NY 256
 
 // Number of ranks along x and y
-#define N_PROCS_X 4
-#define N_PROCS_Y 4
+#define NPROCS_X 4
+#define NPROCS_Y 4
 
 // Number of lattice updates to reach thermal equilibrium
-#define N_THERM 200000
+#define NTHERM 200000
 
 /* Number of lattice updates during which the expectation values of all the
  * observables are computed after reaching thermal equilibrium                  */
-#define N_CALC 2000000
+#define NCALC 2000000
 
 // Verbosity
 #define VERBOSE     true
 #define VERYVERBOSE true
+
+/* Whether to save the full lattice to a HDF5 file at all timesteps during
+ * thermalization or not                                                        */
+#define SAVE_LATTICE_DURING_THERMALIZATION true
 
 
 #endif  // PARAMETERS_HH
