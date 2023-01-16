@@ -43,17 +43,17 @@ int main(int argc, char **argv) {
 
     /* Find out the neighbors of the current process
      * **CONVENTIONS**
-     * 1. Process IDs increase by 1 along y
+     * 1. Process IDs increase by 1 along x, starting from the top-left
      * 2. Periodic BCs on both x and y                                          */
     // TODO: put this in a routine and select the BCs through a parameter
-    const int right = (proc_ID >= nprocs - NPROCS_Y) ?        // Right edge
-            proc_ID - nprocs + NPROCS_Y : proc_ID + NPROCS_Y;
-    const int left  = (proc_ID < NPROCS_Y) ?                  // Left edge
-            proc_ID + nprocs - NPROCS_Y : proc_ID - NPROCS_Y;
-    const int up    = (proc_ID % NPROCS_Y == NPROCS_Y - 1) ?  // Upper edge
-            proc_ID - NPROCS_Y + 1 : proc_ID + 1;
-    const int down  = (proc_ID % NPROCS_Y == 0) ?             // Lower edge
-            proc_ID + NPROCS_Y - 1 : proc_ID - 1;
+    const int right = (proc_ID % NPROCS_X == NPROCS_X - 1) ?  // Right edge
+            proc_ID - NPROCS_X + 1 : proc_ID + 1;
+    const int left  = (proc_ID % NPROCS_X == 0) ?             // Left edge
+            proc_ID + NPROCS_X - 1 : proc_ID - 1;
+    const int up    = (proc_ID < NPROCS_X) ?                  // Upper edge
+            proc_ID + nprocs - NPROCS_X : proc_ID - NPROCS_X;
+    const int down  = (proc_ID >= nprocs - NPROCS_X) ?        // Lower edge
+            proc_ID - nprocs + NPROCS_X : proc_ID + NPROCS_X;
 
     // Sanity check
     assert(right >= 0 and right < nprocs);
@@ -63,14 +63,14 @@ int main(int argc, char **argv) {
 
 
     // Assign a 'parity' to the current process
-    const int  x_index = proc_ID/NPROCS_Y;
-    const bool parity  = ((proc_ID + x_index) % 2 == 0) ? true : false;
+    const int  y_index = proc_ID/NPROCS_X;
+    const bool parity  = ((proc_ID + y_index) % 2 == 0) ? true : false;
 
     // Sanity check: the full lattice should look like a 'chessboard'
     const array<int, 4> neighbors = {right, left, up, down};
     for (const auto &n : neighbors) {
-        const int x_index_n = n/NPROCS_Y;
-        const int parity_n  = ((n + x_index_n) % 2 == 0) ? true : false;
+        const int y_index_n = n/NPROCS_X;
+        const int parity_n  = ((n + y_index_n) % 2 == 0) ? true : false;
         assert(parity_n != parity);
     }
 
