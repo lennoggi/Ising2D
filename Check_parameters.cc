@@ -27,5 +27,8 @@ void check_parameters(const int &N_procs) {
     static_assert(NX % N_PROCS_X == 0);
     static_assert(NY % N_PROCS_Y == 0);
 
+    static_assert(N_THERM > 0);
+    static_assert(N_CALC  > 0);
+
     return;
 }

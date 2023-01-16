@@ -28,15 +28,14 @@ int main(int argc, char **argv) {
     // Perform sanity checks on the parameters
     check_parameters(N_procs);
 
-    // Compute the size of the process-local grid
-    const int nx = NX/N_PROCS_X;
-    const int ny = NY/N_PROCS_Y;
-
     // Print some info
     #if (VERBOSE)
         INFO("beta = " << BETA);
         INFO("There are " << N_procs << " processes");
-        INFO("The process-local grid size is " << nx << "*" << ny);
+        INFO("The process-local grid size (interior only) is " <<
+             nx_local << "*" << ny_local);
+        INFO("The process-local grid size (including ghosts) is " <<
+             nx_local_p2 << "*" << ny_local_p2);
     #endif
 
 
@@ -61,11 +60,11 @@ int main(int argc, char **argv) {
     assert(down  >= 0 and down  < N_procs);
 
 
-    // Assing a 'parity' to the current process
+    // Assign a 'parity' to the current process
     const int  x_index = proc_ID/N_PROCS_Y;
     const bool parity  = ((proc_ID + x_index) % 2 == 0) ? true : false;
 
-    // Sanity check
+    // Sanity check: the full lattice should look like a 'chessboard'
     const array<int, 4> neighbors = {right, left, up, down};
     for (const auto &n : neighbors) {
         const int x_index_n = n/N_PROCS_Y;
@@ -74,10 +73,25 @@ int main(int argc, char **argv) {
     }
 
 
+    // Process-local lattice
+    array<array<int, ny_local_p2>, nx_local_p2> lattice;
+
+    /* Initialize all the elements of the process-local lattice to 1 (but -1
+     * would work as well) to minimize the entropy, so that thermalization time
+     * is minimized                                                             */
+    for (auto &row : lattice) {
+        for (auto &site : row) {
+            site = 1;
+        }
+    }
+
+
     // Initialize the seed of the random number generator
     srand(time(NULL) + proc_ID);
 
     // TODO: thermalize the lattice and compute observables
+    //update(right, left, up, down, parity, lattice);
+
 
     // Finalize
     MPI_Finalize();

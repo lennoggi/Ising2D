@@ -5,7 +5,7 @@ endif
 
 
 # Objects to be built
-OBJ = Main.o Check_parameters.o
+OBJ = Main.o Check_parameters.o Update.o
 EXE = Ising2D
 
 
@@ -32,6 +32,9 @@ Main.o: Main.cc
 
 Check_parameters.o: Check_parameters.cc
 	$(CXX) -c Check_parameters.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
+
+Update.o: Update.cc
+	$(CXX) -c Update.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
 
 .PHONY : clean
 clean:
