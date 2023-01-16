@@ -92,34 +92,6 @@ int main(int argc, char **argv) {
     srand(time(NULL) + proc_ID);
 
     // TODO: thermalize the full lattice and compute observables
-    INFO("BEFORE UPDATE");
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (proc_ID == 0) {
-        for (auto &row : local_lattice) {
-            for (auto &site : row) {
-                cout << site << "\t";
-            }
-
-            cout << endl;
-        }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    update(right, left, up, down, parity, local_lattice);
-
-
-    INFO("AFTER UPDATE");
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (proc_ID == 0) {
-        for (auto &row : local_lattice) {
-            for (auto &site : row) {
-                cout << site << "\t";
-            }
-
-            cout << endl;
-        }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
 
 
     // Finalize
