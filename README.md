@@ -2,8 +2,8 @@
 An MPI-parallel heat-bath Monte Carlo code to evolve the 2D Ising model and study its phase transition
 
 ## Usage
-1. Tune the parameters (macros living in Parameters.hh; see directory `Option_lists`)
-2. Compile by running `make options=<full_path_to_optionlist>`
+1. Tune the parameters (macros living in Parameters.hh)
+2. Compile by running `make options=<full_path_to_optionlist>` (see directory `OptionLists` for some example optionlists)
 3. Run with e.g. `mpiexec -np <nprocs> ./Ising2D`
 
 ## Things to keep in mind
