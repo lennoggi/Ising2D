@@ -3,6 +3,8 @@
 #include <sstream>
 #include <H5Cpp.h>
 
+/* FIXME: these are only needed if SINGLE_OUTPUT_FILE is true, but they are not
+ *        included if '#if (SINGLE_OUTPUT_FILE) ... #endif' is there            */
 #include <cassert>
 #include <vector>
 
