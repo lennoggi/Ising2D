@@ -28,6 +28,7 @@
 /* Whether to save the full lattice to a HDF5 file at all timesteps during
  * thermalization or not                                                        */
 #define SAVE_LATTICE_DURING_THERMALIZATION true
+#define OUT_EVERY                          1000
 
 
 #endif  // PARAMETERS_HH

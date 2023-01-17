@@ -5,7 +5,7 @@ endif
 
 
 # Objects to be built
-OBJ = Main.o Check_parameters.o Update.o
+OBJ = Main.o Check_parameters.o Update.o Thermalize.o
 EXE = Ising2D
 
 
@@ -25,16 +25,19 @@ endif
 
 # Build all targets
 build: $(OBJ)
-	$(CXX) -o $(EXE) $(OBJ) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
+	$(CXX) -o $(EXE) $(OBJ) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR) -L$(HDF5_LIBS_DIR) $(HDF5_LIBS)
 
 Main.o: Main.cc
-	$(CXX) -c Main.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
+	$(CXX) -c Main.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
 
 Check_parameters.o: Check_parameters.cc
-	$(CXX) -c Check_parameters.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
+	$(CXX) -c Check_parameters.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
 
 Update.o: Update.cc
-	$(CXX) -c Update.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
+	$(CXX) -c Update.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
+
+Thermalize.o: Thermalize.cc
+	$(CXX) -c Thermalize.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
 
 .PHONY : clean
 clean:

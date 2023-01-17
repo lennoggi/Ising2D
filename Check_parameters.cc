@@ -30,5 +30,8 @@ void check_parameters(const int &nprocs) {
     static_assert(NTHERM > 0);
     static_assert(NCALC  > 0);
 
+    static_assert(SAVE_LATTICE_DURING_THERMALIZATION or not SAVE_LATTICE_DURING_THERMALIZATION);
+    static_assert(OUT_EVERY < NTHERM);
+
     return;
 }

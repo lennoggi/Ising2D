@@ -91,7 +91,20 @@ int main(int argc, char **argv) {
     // Initialize the seed of the random number generator
     srand(time(NULL) + proc_ID);
 
-    // TODO: thermalize the full lattice and compute observables
+
+    // Let the lattice thermalize
+    #if (VERBOSE)
+        INFO("Lattice is reaching thermal equilibrium...");
+    #endif
+
+    thermalize(nprocs, proc_ID, right, left, up, down, parity, local_lattice);
+
+    #if (VERBOSE)
+        INFO("Lattice has reached thermal equilibrium");
+    #endif
+
+
+    // TODO: compute observables
 
 
     // Finalize

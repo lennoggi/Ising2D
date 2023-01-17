@@ -2,6 +2,7 @@
 #define DECLARATIONS_HH
 
 #include <array>
+#include <H5Cpp.h>
 #include <mpi.h>
 #include "../Parameters.hh"
 
@@ -39,6 +40,19 @@ void update(const int  &right,
             const int  &down,
             const bool &parity,
             std::array<std::array<int, nxloc_p2>, nyloc_p2> &local_lattice);
+
+void write_local_lattice(const int &n,
+                         const std::array<std::array<int, nxloc_p2>, nyloc_p2> &local_lattice,
+                         H5::H5File &outfile);
+	
+void thermalize(const int  &nprocs,
+                const int  &proc_ID,
+                const int  &right,
+                const int  &left,
+                const int  &up,
+                const int  &down,
+                const bool &parity,
+                std::array<std::array<int, nxloc_p2>, nyloc_p2> &local_lattice);
 
 
 #endif  // DECLARATIONS_HH
