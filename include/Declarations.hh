@@ -41,10 +41,12 @@ void update(const int  &right,
             const bool &parity,
             std::array<std::array<int, nxloc_p2>, nyloc_p2> &local_lattice);
 
-void write_local_lattice(const int &n,
-                         const std::array<std::array<int, nxloc_p2>, nyloc_p2> &local_lattice,
-                         H5::H5File &outfile);
-	
+void write_full_lattice(const int &proc_ID,
+                        const int &nprocs,
+                        const int &n,
+                        const std::array<std::array<int, nxloc_p2>, nyloc_p2> &local_lattice,
+                        const H5::H5File &outfile);
+
 void thermalize(const int  &nprocs,
                 const int  &proc_ID,
                 const int  &right,

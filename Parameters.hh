@@ -7,12 +7,12 @@
 #define BETA 0.42
 
 // Full lattice size
-#define NX 256
-#define NY 256
+#define NX 128
+#define NY 64
 
 // Number of ranks along x and y
 #define NPROCS_X 4
-#define NPROCS_Y 4
+#define NPROCS_Y 2
 
 // Number of lattice updates to reach thermal equilibrium
 #define NTHERM 200000
