@@ -62,7 +62,7 @@ void thermalize(const int  &nprocs,
                 array<array<int, nxloc_p2>, nyloc_p2> &local_lattice) {
 
     ostringstream filename_ss;
-    filename_ss << "Full_lattice_proc_" << proc_ID << ".h5";
+    filename_ss << "Local_lattice_proc_" << proc_ID << ".h5";
     H5File outfile(filename_ss.str(), H5F_ACC_TRUNC);
 
 
