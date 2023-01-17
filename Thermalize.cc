@@ -60,15 +60,10 @@ void thermalize(const int  &nprocs,
                 const int  &down,
                 const bool &parity,
                 array<array<int, nxloc_p2>, nyloc_p2> &local_lattice) {
-    #if (SAVE_LATTICE_DURING_THERMALIZATION)
-        #if (VERBOSE)
-            INFO("Saving the lattice to HDF5 files during thermalization");
-        #endif
 
-        ostringstream filename_ss;
-        filename_ss << "Full_lattice_proc_" << proc_ID << ".h5";
-        H5File outfile(filename_ss.str(), H5F_ACC_TRUNC);
-    #endif
+    ostringstream filename_ss;
+    filename_ss << "Full_lattice_proc_" << proc_ID << ".h5";
+    H5File outfile(filename_ss.str(), H5F_ACC_TRUNC);
 
 
     for (int n = 0; n < NTHERM; ++n) {
