@@ -34,8 +34,8 @@ constexpr inline int nxloc_nyloc = nxloc*nyloc;
  * --------------------- */
 void check_parameters(const int &nprocs);
 
-void update(const int  &right,
-            const int  &left,
+void update(const int  &left,
+            const int  &right,
             const int  &up,
             const int  &down,
             const bool &parity,
@@ -55,8 +55,8 @@ void write_local_lattice(const int &n,
 
 void thermalize(const int  &nprocs,
                 const int  &proc_ID,
-                const int  &right,
                 const int  &left,
+                const int  &right,
                 const int  &up,
                 const int  &down,
                 const bool &parity,

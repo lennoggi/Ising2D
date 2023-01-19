@@ -27,8 +27,8 @@ using namespace H5;
  * Routine writing the full lattice to a dataset in an HDF5 file
  * =============================================================================*/
 void write_full_lattice(const int &proc_ID,
-		        const int &nprocs,
-		        const int &it,
+                        const int &nprocs,
+                        const int &it,
                         const array<array<int, nxloc_p2>, nyloc_p2> &local_lattice,
                         const H5File &outfile) {
     // Send and receive buffers
@@ -113,8 +113,8 @@ void write_full_lattice(const int &proc_ID,
  * =============================================================================*/
 void thermalize(const int  &nprocs,
                 const int  &proc_ID,
-                const int  &right,
                 const int  &left,
+                const int  &right,
                 const int  &up,
                 const int  &down,
                 const bool &parity,
@@ -146,7 +146,7 @@ void thermalize(const int  &nprocs,
             }
         #endif
 
-        update(right, left, up, down, parity, local_lattice);
+        update(left, right, up, down, parity, local_lattice);
     }
 
 

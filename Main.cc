@@ -46,18 +46,18 @@ int main(int argc, char **argv) {
      * 1. Process IDs increase by 1 along x, starting from the top-left
      * 2. Periodic BCs on both x and y                                          */
     // TODO: put this in a routine and select the BCs through a parameter
-    const int right = (proc_ID % NPROCS_X == NPROCS_X - 1) ?  // Right edge
-            proc_ID - NPROCS_X + 1 : proc_ID + 1;
-    const int left  = (proc_ID % NPROCS_X == 0) ?             // Left edge
+    const int left  = (proc_ID % NPROCS_X == 0) ?             // Left edge  (x = 0)
             proc_ID + NPROCS_X - 1 : proc_ID - 1;
-    const int up    = (proc_ID < NPROCS_X) ?                  // Upper edge
+    const int right = (proc_ID % NPROCS_X == NPROCS_X - 1) ?  // Right edge (x = nxloc)
+            proc_ID - NPROCS_X + 1 : proc_ID + 1;
+    const int up    = (proc_ID < NPROCS_X) ?                  // Upper edge (y = 0)
             proc_ID + nprocs - NPROCS_X : proc_ID - NPROCS_X;
-    const int down  = (proc_ID >= nprocs - NPROCS_X) ?        // Lower edge
+    const int down  = (proc_ID >= nprocs - NPROCS_X) ?        // Lower edge (y = nyloc)
             proc_ID - nprocs + NPROCS_X : proc_ID + NPROCS_X;
 
     // Sanity check
-    assert(right >= 0 and right < nprocs);
     assert(left  >= 0 and left  < nprocs);
+    assert(right >= 0 and right < nprocs);
     assert(up    >= 0 and up    < nprocs);
     assert(down  >= 0 and down  < nprocs);
 
@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     const bool parity  = ((proc_ID + y_index) % 2 == 0) ? true : false;
 
     // Sanity check: the full lattice should look like a 'chessboard'
-    const array<int, 4> neighbors = {right, left, up, down};
+    const array<int, 4> neighbors = {left, right, up, down};
     for (const auto &n : neighbors) {
         const int y_index_n = n/NPROCS_X;
         const int parity_n  = ((n + y_index_n) % 2 == 0) ? true : false;
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
         INFO("Lattice is reaching thermal equilibrium...");
     #endif
 
-    thermalize(nprocs, proc_ID, right, left, up, down, parity, local_lattice);
+    thermalize(nprocs, proc_ID, left, right, up, down, parity, local_lattice);
 
     #if (VERBOSE)
         INFO("Lattice has reached thermal equilibrium");

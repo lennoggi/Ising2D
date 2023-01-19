@@ -12,8 +12,8 @@ using namespace std;
  * Routine updating the process-local lattice by dividing the latter in four
  * equal parts and performing communications on each of them one after the other
  * =============================================================================*/
-void update(const int  &right,
-            const int  &left,
+void update(const int  &left,
+            const int  &right,
             const int  &up,
             const int  &down,
             const bool &parity,
