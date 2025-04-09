@@ -1,86 +1,84 @@
 #include <cassert>
-#include <cstdlib>
-#include <ctime>
+#include <iostream>
 #include <array>
+//#include <random>
+#include <chrono>
+
 #include <mpi.h>
 
-#include "include/Declarations.hh"
+#include "include/Check_parameters.hh"
+#include "include/Declare_variables.hh"
+#include "include/Declare_functions.hh"
 #include "include/Macros.hh"
+#include "include/Types.hh"
+
 #include "Parameters.hh"
 
-
-#include <iostream>
 using namespace std;
 
 
+
 int main(int argc, char **argv) {
-    // Initialize
+    // Can't call CHECK_ERROR() before knowing the rank ID
     MPI_Init(&argc, &argv);
 
-    // Get the total number of processes
-    int nprocs;
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    assert(nprocs > 0);
+    int rank, nprocs;
+    assert(MPI_Comm_rank(MPI_COMM_WORLD, &rank) == MPI_SUCCESS);
+    CHECK_ERROR(rank, MPI_Comm_size(MPI_COMM_WORLD, &nprocs));
+    assert(rank < nprocs);
 
-    // Get the ID of the current process
-    int proc_ID;
-    MPI_Comm_rank(MPI_COMM_WORLD, &proc_ID);
-    assert(proc_ID >= 0 and proc_ID < nprocs);
 
-    // Perform sanity checks on the parameters
-    check_parameters(nprocs);
+    // Redirect stdout and stderr to process-specific files if desired
+    #if (OUTERR_ALL_RANKS)
+    ostringstream new_stdout_ss;
+    new_stdout_ss << "rank" << rank << ".out";
+    FILE* new_stdout;
+    new_stdout = freopen(new_stdout_ss.str().c_str(), "w", stdout);
+    assert(new_stdout != nullptr);
 
-    // Print some info
-    #if (VERBOSE)
-        INFO("beta = " << BETA);
-        INFO("There are " << nprocs << " processes");
-        INFO("The process-local grid size (interior only) is " <<
-             nxloc << "*" << nyloc);
-        INFO("The process-local grid size (including ghosts) is " <<
-             nxloc_p2 << "*" << nyloc_p2);
+    ostringstream new_stderr_ss;
+    new_stderr_ss << "rank" << rank << ".err";
+    FILE* new_stderr;
+    new_stderr = freopen(new_stderr_ss.str().c_str(), "w", stderr);
+    assert(new_stderr != nullptr);
     #endif
 
-
-    /* Find out the neighbors of the current process
-     * **CONVENTIONS**
-     * 1. Process IDs increase by 1 along x, starting from the top-left
-     * 2. Periodic BCs on both x and y                                          */
-    // TODO: put this in a routine and select the BCs through a parameter
-    const int left  = (proc_ID % NPROCS_X == 0) ?             // Left edge  (x = 0)
-            proc_ID + NPROCS_X - 1 : proc_ID - 1;
-    const int right = (proc_ID % NPROCS_X == NPROCS_X - 1) ?  // Right edge (x = nxloc)
-            proc_ID - NPROCS_X + 1 : proc_ID + 1;
-    const int up    = (proc_ID < NPROCS_X) ?                  // Upper edge (y = 0)
-            proc_ID + nprocs - NPROCS_X : proc_ID - NPROCS_X;
-    const int down  = (proc_ID >= nprocs - NPROCS_X) ?        // Lower edge (y = nyloc)
-            proc_ID - nprocs + NPROCS_X : proc_ID + NPROCS_X;
-
-    // Sanity check
-    assert(left  >= 0 and left  < nprocs);
-    assert(right >= 0 and right < nprocs);
-    assert(up    >= 0 and up    < nprocs);
-    assert(down  >= 0 and down  < nprocs);
+    INFO(rank, "There are " << nprocs << " MPI processes, this is process " << rank);
 
 
-    // Assign a 'parity' to the current process
-    const int  y_index = proc_ID/NPROCS_X;
-    const bool parity  = ((proc_ID + y_index) % 2 == 0) ? true : false;
-
-    // Sanity check: the full lattice should look like a 'chessboard'
-    const array<int, 4> neighbors = {left, right, up, down};
-    for (const auto &n : neighbors) {
-        const int y_index_n = n/NPROCS_X;
-        const int parity_n  = ((n + y_index_n) % 2 == 0) ? true : false;
-        assert(parity_n != parity);
+    // Sanity check on the domain decomposition
+    constexpr auto nprocs_expected = NPROCS_X1*NPROCS_X2;
+    if (nprocs_expected != nprocs) {
+        ERROR(rank, "The total number of MPI processes (" << nprocs <<
+              ") doesn't match the desired decomposition of the integration surface (" <<
+              NPROCS_X1 << "*" << NPROCS_X2 << "=" << nprocs_expected << ")");
+        return 1;  // Not reached
     }
 
+    /* NOTE: both nx1loc=NX1/NPROCS_X1 and nx2loc=NX2/NPROCS_X2 must be EVEN in
+     *   order for communication among MPI processes to happen smoothly using
+     *   the 'parity' technique.
+     *   This check is performed in include/Declare_variables.hh .              */
+    INFO(rank, "Process-local grid size: " << nx1loc << "*" << nx2loc);
 
-    // Process-local lattice
-    array<array<int, nxloc_p2>, nyloc_p2> local_lattice;
+
+    // Get the neighbors and parity of the current process
+    //const auto &neighbors_and_parity = set_neighbors_and_parity(rank, nprocs);
+    const auto &[x1down, x1up, x2down, x2up, parity] = set_neighbors_and_parity(rank, nprocs);
+
+    #if (VERBOSE)
+    INFO(rank, "Neighbors of process " << rank << ": " <<
+           "x1down=" << x1down << ", x1up=" << x1up <<
+         ", x2down=" << x2down << ", x2up=" << x2up);
+    INFO(rank, "Parity of process " << rank << ": " << (int) parity);
+    #endif
+
 
     /* Initialize all the elements of the process-local lattice to 1 (but -1
      * would work as well) to minimize the entropy, so that thermalization time
      * is minimized                                                             */
+    array<array<int, nx1loc_p2>, nx2loc_p2> local_lattice;
+
     for (auto &row : local_lattice) {
         for (auto &site : row) {
             site = 1;
@@ -89,25 +87,44 @@ int main(int argc, char **argv) {
 
 
     // Initialize the seed of the random number generator
-    srand(time(NULL) + proc_ID);
+    //srand(time(NULL) + rank);
+    // XXX: change this with
+    //random_device rd;  // Use machine entropy as the random seed 
+    //mt19937 gen(rd() + rank);  // Each rank has to have a different seed
+    // XXX: or some other random number generator
 
 
     // Let the lattice thermalize
     #if (VERBOSE)
-        INFO("Lattice is reaching thermal equilibrium...");
+    INFO(rank, "beta = " << BETA);
+    INFO(rank, "Begin lattice thermalization");
     #endif
 
-    thermalize(nprocs, proc_ID, left, right, up, down, parity, local_lattice);
+    const auto thermalize_start = chrono::high_resolution_clock::now();
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    //thermalize(nprocs, rank, left, right, up, down, parity, local_lattice);
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    const auto thermalize_end   = chrono::high_resolution_clock::now();
+    const auto thermalize_time  = chrono::duration_cast<chrono::seconds>(thermalize_end - thermalize_start);
 
     #if (VERBOSE)
-        INFO("Lattice has reached thermal equilibrium");
+    INFO(rank, "Lattice has reached thermal equilibrium");
     #endif
 
 
-    // TODO: compute observables
+    // TODO TODO TODO TODO TODO TODO
+    // TODO TODO TODO TODO TODO TODO
+    // TODO TODO TODO TODO TODO TODO
+    // Compute observables
+    // TODO TODO TODO TODO TODO TODO
+    // TODO TODO TODO TODO TODO TODO
+    // TODO TODO TODO TODO TODO TODO
 
 
-    // Finalize
     MPI_Finalize();
 
     return 0;

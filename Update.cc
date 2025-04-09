@@ -37,6 +37,7 @@ void update(const int  &left,
 
 
     // Loop over the four parts of the process-local lattice
+    constexpr auto _2beta = 2.*BETA;
     int count = 0;
 
     for (int ky = 0; ky < 2; ++ky) {

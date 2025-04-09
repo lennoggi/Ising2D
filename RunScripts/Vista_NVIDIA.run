@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+simdir="/scratch/07825/lennoggi/Ising2D_run"
+submitscript="Vista_NVIDIA.sub"
+submit_cmd="sbatch"
+
+mkdir ${simdir}
+cp ../Ising2D_exe ${simdir}
+cp ../SubmitScripts/${submitscript} ${simdir}
+cp ../Parameters.hh ${simdir}
+cd ${simdir}
+${submit_cmd} ${submitscript}
+
+echo ""
+echo "Job submitted successfully"
+echo ""
