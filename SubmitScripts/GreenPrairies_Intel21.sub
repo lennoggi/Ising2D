@@ -9,6 +9,7 @@
 #SBATCH -e Ising2D_run.err
 
 module restore intel2021
+ml phdf5
 
 # This only works with less MPI processes than physical cores, except if only using one node 
 ##time srun --mpi=pmix ./Ising2D_exe

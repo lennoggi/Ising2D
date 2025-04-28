@@ -1,15 +1,28 @@
 #ifndef DECLARE_FUNCTIONS_HH
 #define DECLARE_FUNCTIONS_HH
 
-#include "Types.hh"
+#include <array>
+#include <hdf5.h>
+#include "Declare_variables.hh"
 
 
-/* ==========================
- * Routines from Neighbors.cc
- * ========================== */
-neighbors_and_parity_t
-set_neighbors_and_parity(const int &rank,
-                         const int &nprocs);
+/* =========================================
+ * Routines from Indices_neighbors_parity.cc
+ * ========================================= */
+std::array<int, 7>
+set_indices_neighbors_parity(const int &rank,
+                             const int &nprocs);
+
+/* ==============================
+ * Routines from Write_lattice.cc
+ * ============================== */
+void write_lattice(const int &rank,
+                   const int &nprocs,
+                   const int &x1index,
+                   const int &x2index,
+                   const int &n,
+                   const std::array<int, nx1locp2_nx2locp2> &local_lattice,
+                   const hid_t &file_id);
 
 //void update(const int  &left,
 //            const int  &right,

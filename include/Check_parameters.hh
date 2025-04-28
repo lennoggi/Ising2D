@@ -29,8 +29,6 @@ static_assert(NCALC  > 0);
 static_assert(SAVE_LATTICE_THERM or not SAVE_LATTICE_THERM);
 static_assert(SAVE_LATTICE_CALC  or not SAVE_LATTICE_CALC);
 
-static_assert(SINGLE_OUTPUT_FILE or not SINGLE_OUTPUT_FILE);
-
 static_assert(OUT_EVERY > 0);
 
 

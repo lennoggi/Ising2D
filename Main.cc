@@ -1,16 +1,16 @@
 #include <cassert>
 #include <iostream>
 #include <array>
-//#include <random>
+#include <random>
 #include <chrono>
 
 #include <mpi.h>
+#include <hdf5.h>
 
 #include "include/Check_parameters.hh"
 #include "include/Declare_variables.hh"
 #include "include/Declare_functions.hh"
 #include "include/Macros.hh"
-#include "include/Types.hh"
 
 #include "Parameters.hh"
 
@@ -62,11 +62,14 @@ int main(int argc, char **argv) {
     INFO(rank, "Process-local grid size: " << nx1loc << "*" << nx2loc);
 
 
-    // Get the neighbors and parity of the current process
-    //const auto &neighbors_and_parity = set_neighbors_and_parity(rank, nprocs);
-    const auto &[x1down, x1up, x2down, x2up, parity] = set_neighbors_and_parity(rank, nprocs);
+    /* Get the neighbors and parity of the current process
+     * NOTE: this process' neighbors and parity are needed by update(), so the
+     *   return value of set_indices_neighbors_parity() is unpacked separately  */
+    const auto &indices_neighbors_parity = set_indices_neighbors_parity(rank, nprocs);
+    const auto &[x1index, x2index, x1down, x1up, x2down, x2up, parity] = indices_neighbors_parity;
 
     #if (VERBOSE)
+    INFO(rank, "Indices of process " << rank << " along x1 and x2: " << x1index << ", " << x2index);
     INFO(rank, "Neighbors of process " << rank << ": " <<
            "x1down=" << x1down << ", x1up=" << x1up <<
          ", x2down=" << x2down << ", x2up=" << x2up);
@@ -77,21 +80,28 @@ int main(int argc, char **argv) {
     /* Initialize all the elements of the process-local lattice to 1 (but -1
      * would work as well) to minimize the entropy, so that thermalization time
      * is minimized                                                             */
-    array<array<int, nx1loc_p2>, nx2loc_p2> local_lattice;
+    array<int, nx1locp2_nx2locp2> local_lattice;
 
-    for (auto &row : local_lattice) {
-        for (auto &site : row) {
-            site = 1;
-        }
+    for (auto &site : local_lattice) {
+        site = rank; //1;
     }
 
 
+    // Write the initial lattice to file
+    auto fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+    assert(fapl_id >= 0);
+    CHECK_ERROR(rank, H5Pset_fapl_mpio(fapl_id, MPI_COMM_WORLD, MPI_INFO_NULL));
+    CHECK_ERROR(rank, H5Pset_all_coll_metadata_ops(fapl_id, true));
+
+    const auto file_id = H5Fcreate("Lattice_global.h5", H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
+    assert(file_id >= 0);
+
+    write_lattice(rank, nprocs, x1index, x2index, 0, local_lattice, file_id);
+
+
     // Initialize the seed of the random number generator
-    //srand(time(NULL) + rank);
-    // XXX: change this with
-    //random_device rd;  // Use machine entropy as the random seed 
-    //mt19937 gen(rd() + rank);  // Each rank has to have a different seed
-    // XXX: or some other random number generator
+    random_device rd;          // Use machine entropy as the random seed 
+    mt19937 gen(rd() + rank);  // Each rank must have a different seed
 
 
     // Let the lattice thermalize
@@ -101,6 +111,14 @@ int main(int argc, char **argv) {
     #endif
 
     const auto thermalize_start = chrono::high_resolution_clock::now();
+
+    //for (auto n = decltype(NTHERM){0}; n < NTHERM; ++n) {
+    //    update(neighbors_and_parity, local_lattice);
+    //}
+
+
+
+
     // XXX XXX XXX XXX XXX XXX
     // XXX XXX XXX XXX XXX XXX
     // XXX XXX XXX XXX XXX XXX
@@ -125,7 +143,10 @@ int main(int argc, char **argv) {
     // TODO TODO TODO TODO TODO TODO
 
 
-    MPI_Finalize();
+
+    CHECK_ERROR(rank, H5Fclose(file_id));
+    CHECK_ERROR(rank, H5Pclose(fapl_id));
+    CHECK_ERROR(rank, MPI_Finalize());
 
     return 0;
 }

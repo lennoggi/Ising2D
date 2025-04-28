@@ -11,6 +11,8 @@ using namespace std;
 /* =============================================================================
  * Routine updating the process-local lattice by dividing the latter in four
  * equal parts and performing communications on each of them one after the other
+ * NOTE: the above technique ensures the ghost points used to update points at
+ *       the boundary of the process-local lattice are up to date
  * =============================================================================*/
 void update(const int  &left,
             const int  &right,

@@ -11,13 +11,13 @@ Lorenzo Ennoggi (<le8016@rit.edu> / <lorenzo.ennoggi@gmail.com>)
 ## Minimal requirements
 - A C++ compiler supporting the `C++17` standard
 - An MPI library
-- The HDF5 library
+- The HDF5 library with MPI support
 
 ## Usage
 1. Tune the parameters -- macros living in `Parameters.hh`
 2. Compile
    ```
-   make -j9 options=OptionLists/<optionlist>
+   make -j4 options=OptionLists/<optionlist>
    ```
    where `<optionlist>` is the list of compiler options for your machine
 3. Edit the job submission script for your machine as needed, or create a new one if your machine is not listed there

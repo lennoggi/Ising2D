@@ -33,12 +33,6 @@
 // Whether to save lattice data during the calculation of the observables
 #define SAVE_LATTICE_CALC true
 
-/* Whether to output a single file or one file per process
- * NOTE: outputting one file per process is likely slower, but reduces the
- *   stress on the filesystem and there is no need to recombine data from
- *   different processes after the simulation                                   */
-#define SINGLE_OUTPUT_FILE true
-
 // Output frequency
 #define OUT_EVERY 1000
 

@@ -2,20 +2,18 @@
 #include <cassert>
 #include <array>
 
-#include "include/Types.hh"
-
 #include "Parameters.hh"
 
 using namespace std;
 
 
 
-/* Think of the full grid e.g. as:
+/* Think of the full grid as:
  *      |----------------|
- *   ^  | 15 16 17 18 19 |  Example with NPROCS_X1=4, NPROCS_X2=5
- *   |  | 10 11 12 13 14 |
- *   x1 | 5  6  7  8  9  |
- *      | 0  1  2  3  4  |
+ *   x1 |  0  1  2  3  4 |  Example with NPROCS_X1=4, NPROCS_X2=5
+ *   |  |  5  6  7  8  9 |
+ *   v  | 10 11 12 13 14 |
+ *      | 15 16 17 18 19 |
  *      |----------------|
  *                  x2 ->
  *
@@ -25,9 +23,9 @@ using namespace std;
  *   - Hard boundary on e.g. x with fixed +1 or -1 boundary points
  *   - (...)
  */
-neighbors_and_parity_t
-set_neighbors_and_parity(const int &rank,
-                         const int &nprocs) {
+array<int, 7>
+set_indices_neighbors_parity(const int &rank,
+                             const int &nprocs) {
     const auto indices = div(rank, NPROCS_X2);
     const auto x1index = indices.quot;
     const auto x2index = indices.rem;
@@ -38,8 +36,8 @@ set_neighbors_and_parity(const int &rank,
 
     constexpr int diff_rank_x1 = NPROCS_X2*(NPROCS_X1 - 1);
 
-    const auto x1down = (x1index == 0)             ? rank + diff_rank_x1 : rank - NPROCS_X2;
-    const auto x1up   = (x1index == NPROCS_X1 - 1) ? rank - diff_rank_x1 : rank + NPROCS_X2;
+    const auto x1down = (x1index == NPROCS_X1 - 1) ? rank - diff_rank_x1 : rank + NPROCS_X2;
+    const auto x1up   = (x1index == 0)             ? rank + diff_rank_x1 : rank - NPROCS_X2;
 
     assert(x1down >= 0 and x1down < nprocs);
     assert(x1up   >= 0 and x1up   < nprocs);
@@ -63,6 +61,5 @@ set_neighbors_and_parity(const int &rank,
         assert(parity_nb != parity);
     }
 
-
-    return neighbors_and_parity_t{x1down, x1up, x2down, x2up, parity};
+    return array<int, 7> {x1index, x2index, x1down, x1up, x2down, x2up, parity};
 }
