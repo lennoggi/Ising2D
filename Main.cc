@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
     array<int, nx1locp2_nx2locp2> local_lattice;
 
     for (auto &site : local_lattice) {
-        site = rank; //1;
+        site = 1;
     }
 
 
