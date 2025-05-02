@@ -26,7 +26,7 @@ endif
 
 
 # Objects to be built
-OBJ = Main.o Indices_neighbors_parity.o Write_lattice.o ##Update.o
+OBJ = Indices_neighbors_parity.o Main.o Update.o Write_lattice.o
 EXE = Ising2D_exe
 
 
@@ -37,15 +37,15 @@ build: $(OBJ)
 Indices_neighbors_parity.o: Indices_neighbors_parity.cc Parameters.hh
 	$(CXX) -c Indices_neighbors_parity.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
 
-Main.o: Main.cc include/Check_parameters.hh include/Declare_functions.hh include/Declare_variables.hh include/Macros.hh Parameters.hh
+Main.o: Main.cc include/Check_parameters.hh include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
 	$(CXX) -c Main.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
 
-Write_lattice.o: Write_lattice.cc include/Declare_functions.hh include/Declare_variables.hh include/Macros.hh
+Write_lattice.o: Write_lattice.cc include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh
 	$(CXX) -c Write_lattice.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
 
-##Update.o: Update.cc
-##	$(CXX) -c Update.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
-##
+Update.o: Update.cc include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
+	$(CXX) -c Update.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
+
 
 
 # Remove the executable and all object files

@@ -1,8 +1,11 @@
-#include <cstdlib>
 #include <cmath>
 #include <array>
+#include <random>
 
-#include "include/Declarations.hh"
+#include "include/Declare_variables.hh"
+#include "include/Declare_functions.hh"
+#include "include/Macros.hh"
+
 #include "Parameters.hh"
 
 using namespace std;
@@ -14,22 +17,37 @@ using namespace std;
  * NOTE: the above technique ensures the ghost points used to update points at
  *       the boundary of the process-local lattice are up to date
  * =============================================================================*/
-void update(const int  &left,
-            const int  &right,
-            const int  &up,
-            const int  &down,
-            const bool &parity,
-            array<array<int, nxloc_p2>, nyloc_p2> &local_lattice) {
+void update(const int                               &rank,
+                  mt19937                           &gen,   // NOTE: can't be constant because dist changes the internal status of gen
+                  uniform_real_distribution<double> &dist,  // NOTE: also non-const
+            const array<int, 7>                     &indices_neighbors_parity,
+                  array<int, nx1locp2_nx2locp2>     &local_lattice)
+    {
+    const auto &[x1index, x2index, x1down, x1up, x2down, x2up, parity] = indices_neighbors_parity;
 
     /* Arrays encoding which processes rows (i.e. x data chunks) and columns
      * (i.e. y data chunks) should be sent to and received from. The
      * process-local lattice is assumed to be splitted in four parts like this:
      *   0  1
-     *   2  3                                                                   */
-    const array<int, 4> sendrow = {up,    up,    down,  down};
-    const array<int, 4> sendcol = {left,  right, left,  right};
-    const array<int, 4> recvrow = {down,  down,  up,    up};
-    const array<int, 4> recvcol = {right, left,  right, left};
+     *   2  3
+     * and element i in each array correspond to the ith part of the process.
+     * NOTE: think of the full grid e.g. as:
+     *        |----------------|
+     *   x1 0 | 0  1  2  3  4  |  Example with NPROCS_X1=4, NPROCS_X2=5
+     *   |  1 | 5  6  7  8  9  |
+     *   v  2 | 10 11 12 13 14 |
+     *      3 | 15 16 17 18 19 |
+     *        |----------------|
+     *          0  1  2  3  4
+     *                  x2 ->
+     * with both x1 and x2 being periodic (torus topology)
+     * NOTE: think of the process as being split up like
+     *       0  1
+     *       2  3                                                               */
+    const array<int, 4> x1send = {x1up,   x1up,   x1down, x1down};
+    const array<int, 4> x1recv = {x1down, x1down, x1up,   x1up};
+    const array<int, 4> x2send = {x2down, x2up,   x2down, x2up};
+    const array<int, 4> x2recv = {x2up,   x2down, x2up,   x2down};
 
     // Communication tags
     const int tag1 = 1;
@@ -42,94 +60,87 @@ void update(const int  &left,
     constexpr auto _2beta = 2.*BETA;
     int count = 0;
 
-    for (int ky = 0; ky < 2; ++ky) {
-        const int offset_y = ky*nyloc_half;
-        const int imin     = offset_y + 1;
-        const int imax     = imin + nyloc_half;
+    for (int kx1 = 0; kx1 < 2; ++kx1) {
+        const auto sx1  = kx1*nx1loc_half;
+        const auto imin = sx1 + 1;
+        const auto imax = imin + nx1loc_half;
 
-        for (int kx = 0; kx < 2; ++kx) {
-            const int offset_x  = kx*nxloc_half;
-            const int jmin      = offset_x + 1;
-            const int jmax      = jmin + nxloc_half;
+        const auto isend = (kx1 == 0) ? 1 : nx1loc;
+        const auto irecv = (kx1 == 0) ? nx1loc_p1 : 0;
+
+        const auto isend_idx = isend*nx2loc_p2;
+        const auto irecv_idx = irecv*nx2loc_p2;
+
+        for (int kx2 = 0; kx2 < 2; ++kx2) {
+            const int sx2  = kx2*nx2loc_half;
+            const int jmin = sx2 + 1;
+            const int jmax = jmin + nx2loc_half;
 
             // Update the current part of the process-local lattice
-            for (int i = imin; i < imax; ++i) {
-                for (int j = jmin; j < jmax; ++j) {
-                    const int f = -(local_lattice.at(i + 1).at(j) +
-                                    local_lattice.at(i - 1).at(j) +
-                                    local_lattice.at(i).at(j + 1) +
-                                    local_lattice.at(i).at(j - 1));
-                    const double trial = rand()/(1.*RAND_MAX);
-                    const double prob  = 1./(1. + exp(_2beta*f));
+            for (auto i = decltype(imax){imin}; i < imax; ++i) {
+                const auto i_idx  = i*nx2loc_p2;
+                const auto ip_idx = i_idx + nx2loc_p2;  // (i+1)*nx2loc_p2
+                const auto im_idx = i_idx - nx2loc_p2;  // (i-1)*nx2loc_p2
 
-                    if (trial < prob) {
-                        local_lattice.at(i).at(j) = 1;
-                    }
+                for (auto j = decltype(jmax){jmin}; j < jmax; ++j) {
+                    const auto ij  = i_idx + j;
+                    const auto ipj = ip_idx + j;
+                    const auto imj = im_idx + j;
+                    const auto ijp = ij + 1;
+                    const auto ijm = ij - 1;
 
-                    else {
-                        local_lattice.at(i).at(j) = -1;
-                    }
+                    const auto   f     = -(local_lattice.at(ipj) + local_lattice.at(imj) + local_lattice.at(ijp) + local_lattice.at(ijm));
+                    const double trial = dist(gen);  // NOTE: this assumes dist is a uniformly-chosen random number between 0 and 1
+                    const double prob  = 1./(1. + exp(_2beta*f));  // exp(-BETA*f)/(exp(-BETA*f) + exp(BETA*f))
+
+                    local_lattice.at(ij) = (trial < prob) ? 1 : -1;
                 }
             }
 
-            /* Set up the chunks of data to be sent out, thinking the
-	     * process-local array as indexed like this:
-	     * (i=0, j=0)        ...  (i=0, j=nxloc-1)
-	     *     ...           ...      ...
-	     * (i=nyloc-1, j=0)  ...  (i=nyloc-1, j=nxloc-1)                    */
-            const int i_send = (ky == 0) ? 1 : nyloc;
-            const int j_send = (kx == 0) ? 1 : nxloc;
+            // Helper variables for communication
+            const auto jsend = (kx2 == 0) ? 1 : nx2loc;
+            const auto jrecv = (kx2 == 0) ? nx2loc_p1 : 0;
 
-            array<int, nxloc_half> outrow, inrow;
-            array<int, nyloc_half> outcol, incol;
+            const auto isend_idx_sx2 = isend_idx + sx2;
+            const auto irecv_idx_sx2 = irecv_idx + sx2;
 
-            for (int j = 1; j <= nxloc_half; ++j) {
-                outrow.at(j - 1) = local_lattice.at(i_send).at(j + offset_x);
+            array<int, nx2loc_half> x1out, x1in;
+            array<int, nx1loc_half> x2out, x2in;
+
+            // Set up the chunks of data to be sent out
+            for (auto j = decltype(nx2loc_half){1}; j <= nx2loc_half; ++j) {
+                x1out.at(j-1) = local_lattice.at(isend_idx_sx2 + j);            // local_lattice[isend][j + sx2]
             }
 
-            for (int i = 1; i <= nyloc_half; ++i) {
-                outcol.at(i - 1) = local_lattice.at(i + offset_y).at(j_send);
+            for (auto i = decltype(nx1loc_half){1}; i <= nx1loc_half; ++i) {
+                x2out.at(i-1) = local_lattice.at((i + sx1)*nx2loc_p2 + jsend);  // local_lattice[i + sx1][jsend]
             }
-
 
             // Communicate
             if (parity) {
-                MPI_Send(outrow.data(), nxloc_half, MPI_INT, sendrow.at(count),
-                         tag1, MPI_COMM_WORLD);
-                MPI_Recv(inrow.data(),  nxloc_half, MPI_INT, recvrow.at(count),
-                         tag2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                MPI_Send(outcol.data(), nyloc_half, MPI_INT, sendcol.at(count),
-                         tag3, MPI_COMM_WORLD);
-                MPI_Recv(incol.data(),  nyloc_half, MPI_INT, recvcol.at(count),
-                         tag4, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                CHECK_ERROR(rank, MPI_Send(x1out.data(), nx2loc_half, MPI_INT, x1send.at(count), tag1, MPI_COMM_WORLD));
+                CHECK_ERROR(rank, MPI_Recv(x1in.data(),  nx2loc_half, MPI_INT, x1recv.at(count), tag2, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+                CHECK_ERROR(rank, MPI_Send(x2out.data(), nx1loc_half, MPI_INT, x2send.at(count), tag3, MPI_COMM_WORLD));
+                CHECK_ERROR(rank, MPI_Recv(x2in.data(),  nx1loc_half, MPI_INT, x2recv.at(count), tag4, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+            } else {
+                CHECK_ERROR(rank, MPI_Recv(x1in.data(),  nx2loc_half, MPI_INT, x1recv.at(count), tag1, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+                CHECK_ERROR(rank, MPI_Send(x1out.data(), nx2loc_half, MPI_INT, x1send.at(count), tag2, MPI_COMM_WORLD));
+                CHECK_ERROR(rank, MPI_Recv(x2in.data(),  nx1loc_half, MPI_INT, x2recv.at(count), tag3, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+                CHECK_ERROR(rank, MPI_Send(x2out.data(), nx1loc_half, MPI_INT, x2send.at(count), tag4, MPI_COMM_WORLD));
             }
-
-            else {
-                MPI_Send(outrow.data(), nxloc_half, MPI_INT, sendrow.at(count),
-                         tag2, MPI_COMM_WORLD);
-                MPI_Recv(inrow.data(),  nxloc_half, MPI_INT, recvrow.at(count),
-                         tag1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                MPI_Send(outcol.data(), nyloc_half, MPI_INT, sendcol.at(count),
-                         tag4, MPI_COMM_WORLD);
-                MPI_Recv(incol.data(),  nyloc_half, MPI_INT, recvcol.at(count),
-                         tag3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            }
-
 
             // Store the chunks of data received into the ghost rows and columns
-            const int i_recv = (ky == 0) ? nyloc_p1 : 0;
-            const int j_recv = (kx == 0) ? nxloc_p1 : 0;
-
-            for (int j = 1; j <= nxloc_half; ++j) {
-                local_lattice.at(i_recv).at(j + offset_x) = inrow.at(j - 1);
+            for (auto j = decltype(nx2loc_half){1}; j <= nx2loc_half; ++j) {
+                local_lattice.at(irecv_idx_sx2 + j) = x1in.at(j-1);            // local_lattice[irecv][j + sx2]
             }
 
-            for (int i = 1; i <= nyloc_half; ++i) {
-                local_lattice.at(i + offset_y).at(j_recv) = incol.at(i - 1);
+            for (auto i = decltype(nx1loc_half){1}; i <= nx1loc_half; ++i) {
+                local_lattice.at((i + sx1)*nx2loc_p2 + jrecv) = x2in.at(i-1);  // local_lattice[i + sx1][jrecv]
             }
+
+            // Move to the next quadrant
+            ++count;
         }
-
-        ++count;
     }
 
     return;

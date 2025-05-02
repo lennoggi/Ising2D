@@ -102,6 +102,7 @@ int main(int argc, char **argv) {
     // Initialize the seed of the random number generator
     random_device rd;          // Use machine entropy as the random seed 
     mt19937 gen(rd() + rank);  // Each rank must have a different seed
+    uniform_real_distribution<double> dist(0., 1.);
 
 
     // Let the lattice thermalize
@@ -112,20 +113,17 @@ int main(int argc, char **argv) {
 
     const auto thermalize_start = chrono::high_resolution_clock::now();
 
-    //for (auto n = decltype(NTHERM){0}; n < NTHERM; ++n) {
-    //    update(neighbors_and_parity, local_lattice);
-    //}
+    for (auto n = decltype(NTHERM){1}; n <= NTHERM; ++n) {
+        update(rank, gen, dist, indices_neighbors_parity, local_lattice);
 
+        #if (SAVE_LATTICE_THERM)
+        if (n % OUT_EVERY == 0) {
+            write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_id);
+            INFO(rank, "Iteration " << n << " written to file");
+        }
+        #endif
+    }
 
-
-
-    // XXX XXX XXX XXX XXX XXX
-    // XXX XXX XXX XXX XXX XXX
-    // XXX XXX XXX XXX XXX XXX
-    //thermalize(nprocs, rank, left, right, up, down, parity, local_lattice);
-    // XXX XXX XXX XXX XXX XXX
-    // XXX XXX XXX XXX XXX XXX
-    // XXX XXX XXX XXX XXX XXX
     const auto thermalize_end   = chrono::high_resolution_clock::now();
     const auto thermalize_time  = chrono::duration_cast<chrono::seconds>(thermalize_end - thermalize_start);
 

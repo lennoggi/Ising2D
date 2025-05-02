@@ -7,17 +7,21 @@
 using namespace std;
 
 
-
-/* Think of the full grid as:
- *      |----------------|
- *   x1 |  0  1  2  3  4 |  Example with NPROCS_X1=4, NPROCS_X2=5
- *   |  |  5  6  7  8  9 |
- *   v  | 10 11 12 13 14 |
- *      | 15 16 17 18 19 |
- *      |----------------|
- *                  x2 ->
+/* ============================================================================
+ * Routine setting the process' indices along x1 and x2, its neighbors, and its
+ * parity
+ * ============================================================================
  *
- * with both directions being 2pi-periodic (torus topology)
+ * Think of the full grid e.g. as:
+ *        |----------------|
+ *   x1 0 | 0  1  2  3  4  |  Example with NPROCS_X1=4, NPROCS_X2=5
+ *   |  1 | 5  6  7  8  9  |
+ *   v  2 | 10 11 12 13 14 |
+ *      3 | 15 16 17 18 19 |
+ *        |----------------|
+ *          0  1  2  3  4
+ *                  x2 ->
+ * with both x1 and x2 being periodic (torus topology)
  * TODO: implement different domain topologies with different boundary conditions:
  *   - Periodic (already done)
  *   - Hard boundary on e.g. x with fixed +1 or -1 boundary points

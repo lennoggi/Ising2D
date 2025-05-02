@@ -6,20 +6,21 @@
 
 static_assert(BETA > 0.);
 
-
-static_assert(NPROCS_X1 > 0);
-static_assert(NPROCS_X2 > 0);
+/* Need at least two processes per dimension for the parity-based ghost point
+ * exchange to work                                                             */
+static_assert(NPROCS_X1 > 1);
+static_assert(NPROCS_X2 > 1);
 
 /* Make sure processes can be arranged like a chessboard, so that
  * communications can happen via the 'parity' technique                         */ 
 static_assert(NPROCS_X1 % 2 == 0);
 static_assert(NPROCS_X2 % 2 == 0);
 
-static_assert(NX >= NPROCS_X1);
-static_assert(NY >= NPROCS_X2);
+static_assert(NX1 >= NPROCS_X1);
+static_assert(NX2 >= NPROCS_X2);
 
-static_assert(NX % NPROCS_X1 == 0);
-static_assert(NY % NPROCS_X2 == 0);
+static_assert(NX1 % NPROCS_X1 == 0);
+static_assert(NX2 % NPROCS_X2 == 0);
 
 
 static_assert(NTHERM > 0);
