@@ -8,9 +8,9 @@
 constexpr inline int nx1loc = NX1/NPROCS_X1;
 constexpr inline int nx2loc = NX2/NPROCS_X2;
 
-/* NOTE: both nx1loc=NX1/NPROCS_X1 and nx2loc=NX2LOC/NPROCS_X2 must be EVEN in
- *   order for communication among MPI processes to happen smoothly using the
- *   'parity' technique                                                         */
+/* Both nx1loc=NX1/NPROCS_X1 and nx2loc=NX2LOC/NPROCS_X2 must be EVEN, so that
+ * the process local lattice can be split up exactly into four sub-lattices for
+ * communication purposes                                                       */
 static_assert(nx1loc % 2 == 0);
 static_assert(nx2loc % 2 == 0);
 
