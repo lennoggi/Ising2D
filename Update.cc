@@ -80,16 +80,13 @@ void update(const int                               &rank,
             const auto jsend = (kx2 == 0) ? 1 : nx2loc;
             const auto jrecv = (kx2 == 0) ? nx2loc_p1 : 0;
 
-            const auto isend_idx_sx2 = isend_idx + sx2;
-            const auto irecv_idx_sx2 = irecv_idx + sx2;
+            const auto isend_idx_psx2_p1 = isend_idx + jmin;  // isend_idx + sx2 + 1
+            const auto irecv_idx_psx2_p1 = irecv_idx + jmin;  // irecv_idx + sx2 + 1
 
-            array<int, nx2loc_half> x1out, x1in;
+            /* Set up the column chunks to be sent out
+             * NOTE: no need to copy the row data to a separate buffer, since
+             *       all the spins along a given row are contiguous in memory   */
             array<int, nx1loc_half> x2out, x2in;
-
-            // Set up the chunks of data to be sent out
-            for (auto j = decltype(nx2loc_half){1}; j <= nx2loc_half; ++j) {
-                x1out.at(j-1) = local_lattice.at(isend_idx_sx2 + j);            // local_lattice[isend][j + sx2]
-            }
 
             for (auto i = decltype(nx1loc_half){1}; i <= nx1loc_half; ++i) {
                 x2out.at(i-1) = local_lattice.at((i + sx1)*nx2loc_p2 + jsend);  // local_lattice[i + sx1][jsend]
@@ -97,22 +94,18 @@ void update(const int                               &rank,
 
             // Communicate
             if (parity) {
-                CHECK_ERROR(rank, MPI_Send(x1out.data(), nx2loc_half, MPI_INT, x1send.at(count), tag1, MPI_COMM_WORLD));
-                CHECK_ERROR(rank, MPI_Recv(x1in.data(),  nx2loc_half, MPI_INT, x1recv.at(count), tag2, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-                CHECK_ERROR(rank, MPI_Send(x2out.data(), nx1loc_half, MPI_INT, x2send.at(count), tag3, MPI_COMM_WORLD));
-                CHECK_ERROR(rank, MPI_Recv(x2in.data(),  nx1loc_half, MPI_INT, x2recv.at(count), tag4, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+                CHECK_ERROR(rank, MPI_Send(&local_lattice.at(isend_idx_psx2_p1), nx2loc_half, MPI_INT, x1send.at(count), tag1, MPI_COMM_WORLD));
+                CHECK_ERROR(rank, MPI_Recv(&local_lattice.at(irecv_idx_psx2_p1), nx2loc_half, MPI_INT, x1recv.at(count), tag2, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+                CHECK_ERROR(rank, MPI_Send(x2out.data(),                         nx1loc_half, MPI_INT, x2send.at(count), tag3, MPI_COMM_WORLD));
+                CHECK_ERROR(rank, MPI_Recv(x2in.data(),                          nx1loc_half, MPI_INT, x2recv.at(count), tag4, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
             } else {
-                CHECK_ERROR(rank, MPI_Recv(x1in.data(),  nx2loc_half, MPI_INT, x1recv.at(count), tag1, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-                CHECK_ERROR(rank, MPI_Send(x1out.data(), nx2loc_half, MPI_INT, x1send.at(count), tag2, MPI_COMM_WORLD));
-                CHECK_ERROR(rank, MPI_Recv(x2in.data(),  nx1loc_half, MPI_INT, x2recv.at(count), tag3, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-                CHECK_ERROR(rank, MPI_Send(x2out.data(), nx1loc_half, MPI_INT, x2send.at(count), tag4, MPI_COMM_WORLD));
+                CHECK_ERROR(rank, MPI_Recv(&local_lattice.at(irecv_idx_psx2_p1), nx2loc_half, MPI_INT, x1recv.at(count), tag1, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+                CHECK_ERROR(rank, MPI_Send(&local_lattice.at(isend_idx_psx2_p1), nx2loc_half, MPI_INT, x1send.at(count), tag2, MPI_COMM_WORLD));
+                CHECK_ERROR(rank, MPI_Recv(x2in.data(),                          nx1loc_half, MPI_INT, x2recv.at(count), tag3, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+                CHECK_ERROR(rank, MPI_Send(x2out.data(),                         nx1loc_half, MPI_INT, x2send.at(count), tag4, MPI_COMM_WORLD));
             }
 
-            // Store the chunks of data received into the ghost rows and columns
-            for (auto j = decltype(nx2loc_half){1}; j <= nx2loc_half; ++j) {
-                local_lattice.at(irecv_idx_sx2 + j) = x1in.at(j-1);            // local_lattice[irecv][j + sx2]
-            }
-
+            // Store the column chunk received into the ghost column
             for (auto i = decltype(nx1loc_half){1}; i <= nx1loc_half; ++i) {
                 local_lattice.at((i + sx1)*nx2loc_p2 + jrecv) = x2in.at(i-1);  // local_lattice[i + sx1][jrecv]
             }

@@ -2,7 +2,7 @@
 
 set -e
 
-simdir="/lagoon/lennoggi/Ising2D_run"
+simdir="/lagoon/lennoggi/Ising2D_run_512_512_beta0.5"
 submitscript="GreenPrairies_Intel21.sub"
 submit_cmd="sbatch"
 

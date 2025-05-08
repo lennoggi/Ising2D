@@ -3,8 +3,8 @@
 
 
 /* beta = 1/(kB*T) (kB = 1 here)
- * Critical value: 0.4406868 (infinite lattice)                                 */
-#define BETA 0.46
+ * Critical value: 0.5*log(1 + sqrt(2)) ~= 0.4406868 (infinite lattice)                                 */
+#define BETA 0.5
 
 
 /* Number of MPI processes along x and y

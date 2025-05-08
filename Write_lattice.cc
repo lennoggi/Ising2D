@@ -1,6 +1,14 @@
 #include <cassert>
 #include <array>
 #include <vector>
+// XXX XXX XXX XXX XXX XXX
+// XXX XXX XXX XXX XXX XXX
+// XXX XXX XXX XXX XXX XXX
+//#include <iostream>
+// XXX XXX XXX XXX XXX XXX
+// XXX XXX XXX XXX XXX XXX
+// XXX XXX XXX XXX XXX XXX
+
 #include <hdf5.h>
 
 #include "include/Declare_variables.hh"
@@ -20,6 +28,24 @@ void write_lattice(const int &rank,
                    const int &n,
                    const array<int, nx1locp2_nx2locp2> &local_lattice,
                    const hid_t &file_id) {
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    /* Debug-only printout
+     * Suggestion: have each process initialize its local lattice with its rank
+     *   and check that, after one iteration, the ghosts have been exchanged
+     *   as expected                                                            */
+    //for (auto i = decltype(nx1loc_p2){0}; i < nx1loc_p2; ++i) {
+    //    const auto i_idx = i*nx2loc_p2;
+    //    for (auto j = decltype(nx2loc_p2){0}; j < nx2loc_p2; ++j) {
+    //        cout << local_lattice.at(i_idx + j) << "\t";
+    //    }
+    //    cout << endl;
+    //}
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+
     const array<hsize_t, 2> dims_global = {NX1, NX2};
     const auto fspace_id = H5Screate_simple(2, dims_global.data(), nullptr);
     assert(fspace_id > 0);
