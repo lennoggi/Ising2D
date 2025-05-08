@@ -76,27 +76,6 @@ void update(const int                               &rank,
             const int jmin = sx2 + 1;
             const int jmax = jmin + nx2loc_half;
 
-            // Update the current part of the process-local lattice
-            for (auto i = decltype(imax){imin}; i < imax; ++i) {
-                const auto i_idx  = i*nx2loc_p2;
-                const auto ip_idx = i_idx + nx2loc_p2;  // (i+1)*nx2loc_p2
-                const auto im_idx = i_idx - nx2loc_p2;  // (i-1)*nx2loc_p2
-
-                for (auto j = decltype(jmax){jmin}; j < jmax; ++j) {
-                    const auto ij  = i_idx + j;
-                    const auto ipj = ip_idx + j;
-                    const auto imj = im_idx + j;
-                    const auto ijp = ij + 1;
-                    const auto ijm = ij - 1;
-
-                    const auto   f     = -(local_lattice.at(ipj) + local_lattice.at(imj) + local_lattice.at(ijp) + local_lattice.at(ijm));
-                    const double trial = dist(gen);  // NOTE: this assumes dist is a uniformly-chosen random number between 0 and 1
-                    const double prob  = 1./(1. + exp(_2beta*f));  // exp(-BETA*f)/(exp(-BETA*f) + exp(BETA*f))
-
-                    local_lattice.at(ij) = (trial < prob) ? 1 : -1;
-                }
-            }
-
             // Helper variables for communication
             const auto jsend = (kx2 == 0) ? 1 : nx2loc;
             const auto jrecv = (kx2 == 0) ? nx2loc_p1 : 0;
@@ -136,6 +115,27 @@ void update(const int                               &rank,
 
             for (auto i = decltype(nx1loc_half){1}; i <= nx1loc_half; ++i) {
                 local_lattice.at((i + sx1)*nx2loc_p2 + jrecv) = x2in.at(i-1);  // local_lattice[i + sx1][jrecv]
+            }
+
+            // Update the current part of the process-local lattice
+            for (auto i = decltype(imax){imin}; i < imax; ++i) {
+                const auto i_idx  = i*nx2loc_p2;
+                const auto ip_idx = i_idx + nx2loc_p2;  // (i+1)*nx2loc_p2
+                const auto im_idx = i_idx - nx2loc_p2;  // (i-1)*nx2loc_p2
+
+                for (auto j = decltype(jmax){jmin}; j < jmax; ++j) {
+                    const auto ij  = i_idx + j;
+                    const auto ipj = ip_idx + j;
+                    const auto imj = im_idx + j;
+                    const auto ijp = ij + 1;
+                    const auto ijm = ij - 1;
+
+                    const auto   f     = -(local_lattice.at(ipj) + local_lattice.at(imj) + local_lattice.at(ijp) + local_lattice.at(ijm));
+                    const double trial = dist(gen);  // NOTE: this assumes dist is a uniformly-chosen random number between 0 and 1
+                    const double prob  = 1./(1. + exp(_2beta*f));  // exp(-BETA*f)/(exp(-BETA*f) + exp(BETA*f))
+
+                    local_lattice.at(ij) = (trial < prob) ? 1 : -1;
+                }
             }
 
             // Move to the next quadrant
