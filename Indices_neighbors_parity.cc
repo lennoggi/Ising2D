@@ -14,10 +14,10 @@ using namespace std;
  *
  * Think of the full grid e.g. as:
  *        |----------------|
- *   x1 0 | 0  1  2  3  4  |  Example with NPROCS_X1=4, NPROCS_X2=5
- *   |  1 | 5  6  7  8  9  |
- *   v  2 | 10 11 12 13 14 |
- *      3 | 15 16 17 18 19 |
+ *   ^  3 | 15 16 17 18 19 |  Example with NPROCS_X1=4, NPROCS_X2=5
+ *   |  2 | 10 11 12 13 14 |
+ *   x1 1 | 5  6  7  8  9  |
+ *      0 | 0  1  2  3  4  |
  *        |----------------|
  *          0  1  2  3  4
  *                  x2 ->
@@ -40,8 +40,8 @@ set_indices_neighbors_parity(const int &rank,
 
     constexpr int diff_rank_x1 = NPROCS_X2*(NPROCS_X1 - 1);
 
-    const auto x1down = (x1index == NPROCS_X1 - 1) ? rank - diff_rank_x1 : rank + NPROCS_X2;
-    const auto x1up   = (x1index == 0)             ? rank + diff_rank_x1 : rank - NPROCS_X2;
+    const auto x1down = (x1index == 0)             ? rank + diff_rank_x1 : rank - NPROCS_X2;
+    const auto x1up   = (x1index == NPROCS_X1 - 1) ? rank - diff_rank_x1 : rank + NPROCS_X2;
 
     assert(x1down >= 0 and x1down < nprocs);
     assert(x1up   >= 0 and x1up   < nprocs);
