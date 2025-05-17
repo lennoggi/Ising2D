@@ -12,4 +12,4 @@ jobs:
             - name: Checkout the repository
               uses: actions/checkout@v4
             - name: Compile the code
-              run:  make -j4 options=OptionsLists/Ubuntu_GNU_CI.cfg
+              run:  make -j4 options=OptionLists/Ubuntu_GNU_CI.cfg
