@@ -1,0 +1,15 @@
+name: CI
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    build_and_test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout the repository
+            - run:  actions/checkout@v4
+            - name: Compile the code
+            - run:  make -j4 options=OptionsLists/Ubuntu_GNU_CI.cfg
