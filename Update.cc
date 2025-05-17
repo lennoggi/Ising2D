@@ -40,10 +40,7 @@ void update(const int                               &rank,
      *        |----------------|
      *          0  1  2  3  4
      *                  x2 ->
-     * with both x1 and x2 being periodic (torus topology)
-     * NOTE: think of the process as being split up like
-     *       0  1
-     *       2  3                                                               */
+     * with both x1 and x2 being periodic (torus topology)                      */
     const array<int, 4> x1send = {x1up,   x1up,   x1down, x1down};
     const array<int, 4> x1recv = {x1down, x1down, x1up,   x1up};
     const array<int, 4> x2send = {x2down, x2up,   x2down, x2up};
