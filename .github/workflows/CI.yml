@@ -10,6 +10,6 @@ jobs:
 
         steps:
             - name: Checkout the repository
-            - run:  actions/checkout@v4
+              uses: actions/checkout@v4
             - name: Compile the code
-            - run:  make -j4 options=OptionsLists/Ubuntu_GNU_CI.cfg
+              run:  make -j4 options=OptionsLists/Ubuntu_GNU_CI.cfg
