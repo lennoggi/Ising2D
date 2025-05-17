@@ -91,7 +91,11 @@ void write_lattice(const int &rank,
      * NOTE: because in the HDF5 file row indices increase from top to bottom,
      *   while x1index increases in the reverse direction, the row offset must
      *   be flipped                                                             */
-    const array<hsize_t, 2> offset = {(NPROCS_X1 - x1index - 1)*nx1loc, x2index*nx2loc};  // The global lattice in the file has no ghosts and the offset reflects this
+    const array<hsize_t, 2> offset = {
+        static_cast<hsize_t>((NPROCS_X1 - x1index - 1)*nx1loc),
+        static_cast<hsize_t>(x2index*nx2loc)
+    };  // The global lattice in the file has no ghosts and the offset reflects this
+
     const auto &local_lattice_size_interior = mem_count;  // i.e. {nx1loc, nx2loc}, but this avoids building a new array
     CHECK_ERROR(rank, H5Sselect_hyperslab(fspace_id, H5S_SELECT_SET, offset.data(), nullptr, local_lattice_size_interior.data(), nullptr));
 
