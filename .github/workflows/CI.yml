@@ -5,11 +5,15 @@ on:
     pull_request:
 
 jobs:
-    build_and_test:
+    build:
         runs-on: ubuntu-latest
 
         steps:
             - name: Checkout the repository
               uses: actions/checkout@v4
+            - name: Install OpenMPI
+              run: |
+                sudo apt update
+                sudo apt install -y openmpi-bin libopenmpi-dev
             - name: Compile the code
               run:  make -j4 options=OptionLists/Ubuntu_GNU_CI.cfg
