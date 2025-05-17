@@ -11,9 +11,9 @@ jobs:
         steps:
             - name: Checkout the repository
               uses: actions/checkout@v4
-            - name: Install OpenMPI
+            - name: Install OpenMPI and HDF5 with MPI support
               run: |
                 sudo apt update
-                sudo apt install -y openmpi-bin libopenmpi-dev
+                sudo apt install -y openmpi-bin libopenmpi-dev libhdf5-openmpi-dev
             - name: Compile the code
               run:  make -j4 options=OptionLists/Ubuntu_GNU_CI.cfg
