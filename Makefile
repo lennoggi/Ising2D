@@ -32,19 +32,19 @@ EXE = Ising2D_exe
 
 # Build all targets
 build: $(OBJ)
-	$(CXX) -o $(EXE) $(OBJ) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR) -L$(HDF5_LIBS_DIR) $(HDF5_LIBS)
+	$(CXX) -o $(EXE) $(OBJ) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -L$(HDF5_LIBS_DIR) $(HDF5_LIBS)
 
 Indices_neighbors.o: Indices_neighbors.cc Parameters.hh
-	$(CXX) -c Indices_neighbors.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
+	$(CXX) -c Indices_neighbors.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS)
 
 Main.o: Main.cc include/Check_parameters.hh include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
-	$(CXX) -c Main.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
+	$(CXX) -c Main.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR)
 
 Write_lattice.o: Write_lattice.cc include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh
-	$(CXX) -c Write_lattice.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
+	$(CXX) -c Write_lattice.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR)
 
 Update.o: Update.cc include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
-	$(CXX) -c Update.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)
+	$(CXX) -c Update.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR)
 
 
 
