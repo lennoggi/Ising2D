@@ -18,8 +18,8 @@ static_assert(nx2loc % 2 == 0);
 constexpr inline int nx1loc_p1 = nx1loc + 1;
 constexpr inline int nx2loc_p1 = nx2loc + 1;
 
-/* Full extent (including ghost points) of the process-local lattice along x2
- * (needed to build the index along x1 in the flattened process-local lattice)  */
+/* Full extent (including ghost points) of the process-local lattice along x1
+ * and x2                                                                       */
 constexpr inline int nx1loc_p2 = nx1loc + 2;
 constexpr inline int nx2loc_p2 = nx2loc + 2;
 
@@ -28,7 +28,7 @@ constexpr inline int nx1loc_half = nx1loc/2;
 constexpr inline int nx2loc_half = nx2loc/2;
 
 // Total size (including ghost points) of the flattened process-local lattice
-constexpr inline int nx1locp2_nx2locp2 = (nx1loc + 2)*(nx2loc + 2);
+constexpr inline int nx1locp2_nx2locp2 = nx1loc_p2*nx2loc_p2;
 
 
 #endif  // DECLARATIONS_HH
