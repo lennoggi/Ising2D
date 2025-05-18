@@ -26,7 +26,7 @@ endif
 
 
 # Objects to be built
-OBJ = Indices_neighbors_parity.o Main.o Update.o Write_lattice.o
+OBJ = Indices_neighbors.o Main.o Update.o Write_lattice.o
 EXE = Ising2D_exe
 
 
@@ -34,8 +34,8 @@ EXE = Ising2D_exe
 build: $(OBJ)
 	$(CXX) -o $(EXE) $(OBJ) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR) -L$(HDF5_LIBS_DIR) $(HDF5_LIBS)
 
-Indices_neighbors_parity.o: Indices_neighbors_parity.cc Parameters.hh
-	$(CXX) -c Indices_neighbors_parity.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
+Indices_neighbors.o: Indices_neighbors.cc Parameters.hh
+	$(CXX) -c Indices_neighbors.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS)
 
 Main.o: Main.cc include/Check_parameters.hh include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
 	$(CXX) -c Main.cc $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) -I$(HDF5_INC_DIR)

@@ -2,7 +2,7 @@
 
 set -e
 
-simdir="/scratch3/07825/lennoggi/Ising2D_run"
+simdir="/scratch3/07825/lennoggi/Ising2D_run_384_512_beta0.5"
 submitscript="Frontera_Intel23.sub"
 submit_cmd="sbatch"
 

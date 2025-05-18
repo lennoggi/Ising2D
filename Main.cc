@@ -56,24 +56,22 @@ int main(int argc, char **argv) {
     }
 
     /* NOTE: both nx1loc=NX1/NPROCS_X1 and nx2loc=NX2/NPROCS_X2 must be EVEN in
-     *   order for communication among MPI processes to happen smoothly using
-     *   the 'parity' technique.
+     *   order for the 'white/black' update technique to work.
      *   This check is performed in include/Declare_variables.hh .              */
     INFO(rank, "Process-local grid size: " << nx1loc << "*" << nx2loc);
 
 
-    /* Get the neighbors and parity of the current process
-     * NOTE: this process' neighbors and parity are needed by update(), so the
-     *   return value of set_indices_neighbors_parity() is unpacked separately  */
-    const auto &indices_neighbors_parity = set_indices_neighbors_parity(rank, nprocs);
-    const auto &[x1index, x2index, x1down, x1up, x2down, x2up, parity] = indices_neighbors_parity;
+    /* Get the neighbors of the current process
+     * NOTE: this process' neighbors are needed by update(), so the return value
+     *   of set_indices_neighbors() is unpacked separately                      */
+    const auto &indices_neighbors = set_indices_neighbors(rank, nprocs);
+    const auto &[x1index, x2index, x1down, x1up, x2down, x2up] = indices_neighbors;
 
     #if (VERBOSE)
     INFO(rank, "Indices of process " << rank << " along x1 and x2: " << x1index << ", " << x2index);
     INFO(rank, "Neighbors of process " << rank << ": " <<
            "x1down=" << x1down << ", x1up=" << x1up <<
          ", x2down=" << x2down << ", x2up=" << x2up);
-    INFO(rank, "Parity of process " << rank << ": " << (int) parity);
     #endif
 
 
@@ -114,7 +112,7 @@ int main(int argc, char **argv) {
     const auto thermalize_start = chrono::high_resolution_clock::now();
 
     for (auto n = decltype(NTHERM){1}; n <= NTHERM; ++n) {
-        update(rank, gen, dist, indices_neighbors_parity, local_lattice);
+        update(rank, gen, dist, indices_neighbors, local_lattice);
 
         #if (SAVE_LATTICE_THERM)
         if (n % OUT_EVERY == 0) {

@@ -7,14 +7,14 @@
 #include "Declare_variables.hh"
 
 
-std::array<int, 7>
-set_indices_neighbors_parity(const int &rank,
-                             const int &nprocs);
+std::array<int, 6>
+set_indices_neighbors(const int &rank,
+                      const int &nprocs);
 
 void update(const int                                    &rank,
                   std::mt19937                           &gen,
                   std::uniform_real_distribution<double> &dist,
-            const std::array<int, 7>                     &indices_neighbors_parity,
+            const std::array<int, 6>                     &indices_neighbors,
                   std::array<int, nx1locp2_nx2locp2>     &local_lattice);
 
 void write_lattice(const int &rank,

@@ -10,12 +10,12 @@
 /* Number of MPI processes along x and y
  * NOTE: be sure to request NPROCS_X1*NPROCS_X2 MPI processes in your job
  *       submission script                                                      */
-#define NPROCS_X1 8
+#define NPROCS_X1 6
 #define NPROCS_X2 8
 
 /* Total number of points along the two lattice directions
  * NOTE: both NX1 and NX2 must be EVEN integers                                  */
-#define NX1 512
+#define NX1 384
 #define NX2 512
 
 
