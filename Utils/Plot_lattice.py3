@@ -36,7 +36,7 @@ with h5py.File(infile, "r") as f:
     for dset_name in sorted(list(f.keys()), key = extract_iteration):
         dset  = f[dset_name]
 
-        plt.figure(figsize = (10., 10.), dpi = 200)
+        plt.figure(figsize = (8., 6.), dpi = 200)
         plt.axis("off")
         plt.imshow(dset, interpolation = "none", aspect = "equal",
                    cmap = "plasma", vmin = -1, vmax = 1)
