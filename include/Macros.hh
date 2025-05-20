@@ -7,10 +7,10 @@
 
 
 // Macro printing an informative message
-#define INFO(rankid, msg_ss)                      \
+#define INFO(rank, msg_ss)                        \
     do {                                          \
         std::ostringstream ss;                    \
-        ss << "INFO (rank " << rankid << "): "    \
+        ss << "INFO (rank " << rank << "): "      \
            << msg_ss << endl;                     \
                                                   \
         fprintf(stdout, "%s", ss.str().c_str());  \
@@ -19,10 +19,10 @@
 
 
 // Macro printing a warning message
-#define WARNING(rankid, msg_ss)                    \
+#define WARNING(rank, msg_ss)                      \
     do {                                           \
         std::ostringstream ss;                     \
-        ss << "WARNING (rank " << rankid << "): "  \
+        ss << "WARNING (rank " << rank << "): "    \
            << msg_ss << endl;                      \
                                                    \
         fprintf(stderr, "%s", ss.str().c_str());   \
@@ -31,10 +31,10 @@
 
 
 // Macro printing an error message and aborting program execution
-#define ERROR(rankid, msg_ss)                                  \
+#define ERROR(rank, msg_ss)                                    \
     do {                                                       \
         std::ostringstream ss;                                 \
-        ss << "ERROR (rank " << rankid                         \
+        ss << "ERROR (rank " << rank                           \
            << ", file " << __FILE__ << ", line " << __LINE__   \
            << endl << "  -> " << msg_ss << endl;               \
                                                                \
@@ -45,11 +45,11 @@
 
 
 // Macro checking for errors coming from routines returning error codes
-#define CHECK_ERROR(rankid, routine)                    \
+#define CHECK_ERROR(rank, routine)                      \
 do {                                                    \
     const int err = routine;                            \
     if (err < 0) {                                      \
-        ERROR(rankid, "Routine '" << #routine <<        \
+        ERROR(rank, "Routine '" << #routine <<          \
               "' returned error code " << err << ")");  \
     }                                                   \
 } while (0)
