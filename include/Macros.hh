@@ -11,7 +11,7 @@
     do {                                          \
         std::ostringstream ss;                    \
         ss << "INFO (rank " << rank << "): "      \
-           << msg_ss << endl;                     \
+           << msg_ss << std::endl;                \
                                                   \
         fprintf(stdout, "%s", ss.str().c_str());  \
         fflush(stdout);                           \
@@ -23,7 +23,7 @@
     do {                                           \
         std::ostringstream ss;                     \
         ss << "WARNING (rank " << rank << "): "    \
-           << msg_ss << endl;                      \
+           << msg_ss << std::endl;                 \
                                                    \
         fprintf(stderr, "%s", ss.str().c_str());   \
         fflush(stderr);                            \
@@ -36,7 +36,7 @@
         std::ostringstream ss;                                 \
         ss << "ERROR (rank " << rank                           \
            << ", file " << __FILE__ << ", line " << __LINE__   \
-           << endl << "  -> " << msg_ss << endl;               \
+           << std::endl << "  -> " << msg_ss << std::endl;     \
                                                                \
         fprintf(stderr, "%s", ss.str().c_str());               \
         fflush(stderr);                                        \
