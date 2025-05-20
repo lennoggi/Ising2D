@@ -32,7 +32,7 @@ EXE = Ising2D_exe
 
 # Build all targets
 build: $(OBJ)
-	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) ${LDFLAGS} -I$(HDF5_INC_DIR) -L$(HDF5_LIBS_DIR) $(HDF5_LIBS) -o $(EXE) $(OBJ)
+	$(CXX) -o $(EXE) $(OBJ) ${LDFLAGS} -L$(HDF5_LIBS_DIR) $(HDF5_LIBS)
 
 Indices_neighbors.o: Indices_neighbors.cc Parameters.hh
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -c Indices_neighbors.cc
