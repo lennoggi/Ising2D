@@ -103,6 +103,21 @@ int main(int argc, char **argv) {
     uniform_real_distribution<double> dist(0., 1.);
 
 
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // Copy the process-local lattice to the device if needed
+    #ifdef USE_CUDA
+    int *local_lattice_device = allocate_int_device(rank, nx1locp2_nx2locp2);
+    copy_device(rank, local_lattice_device, local_lattice.data(), nx1locp2_nx2locp2, cudaMemcpyHostToDevice);
+    INFO(rank, "Memory copied to the device");  // XXX: remove
+    free_device(rank, local_lattice_device);          // XXX: don't free the device memory yet, this is just a test
+    INFO(rank, "Memory freed on the device");   // XXX: remove
+    #endif
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+
     // Let the lattice thermalize
     #if (VERBOSE)
     INFO(rank, "beta = " << BETA);
@@ -112,10 +127,28 @@ int main(int argc, char **argv) {
     const auto thermalize_start = chrono::high_resolution_clock::now();
 
     for (auto n = decltype(NTHERM){1}; n <= NTHERM; ++n) {
+        // XXX XXX XXX XXX XXX XXX
+        // XXX XXX XXX XXX XXX XXX
+        // XXX XXX XXX XXX XXX XXX
+        //#ifdef USE_CUDA
+        //update_device(rank, gen, dist, indices_neighbors, local_lattice);
+        //#else
         update(rank, gen, dist, indices_neighbors, local_lattice);
+        //#endif
+        // XXX XXX XXX XXX XXX XXX
+        // XXX XXX XXX XXX XXX XXX
+        // XXX XXX XXX XXX XXX XXX
+        // XXX XXX XXX XXX XXX XXX
 
         #if (SAVE_LATTICE_THERM)
         if (n % OUT_EVERY == 0) {
+            // XXX XXX XXX XXX XXX XXX
+            // XXX XXX XXX XXX XXX XXX
+            // XXX XXX XXX XXX XXX XXX
+            // XXX: copy the lattice back from the device to the host
+            // XXX XXX XXX XXX XXX XXX
+            // XXX XXX XXX XXX XXX XXX
+            // XXX XXX XXX XXX XXX XXX
             write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_id);
             INFO(rank, "Iteration " << n << " written to file");
         }

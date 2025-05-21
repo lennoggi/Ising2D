@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH -A PHY20010
+#SBATCH -p gh-dev
+#SBATCH -t 00:05:00
+#SBATCH -N 1 -n 48
+#SBATCH -J Ising2D_run
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=lorenzo.ennoggi@gmail.com
+#SBATCH -o Ising2D_run.out
+#SBATCH -e Ising2D_run.err
+
+echo "Begin"
+date
+time ibrun ./Ising2D_exe
+echo "Done"
+date

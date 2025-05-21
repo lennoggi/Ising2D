@@ -26,4 +26,22 @@ void write_lattice(const int &rank,
                    const hid_t &file_id);
 
 
+#ifdef USE_CUDA
+
+#include <cuda_runtime.h>
+
+int *allocate_int_device(const int    &rank,
+                         const size_t &size);
+
+void copy_device(const int    &rank,
+                       void           *dest,
+                 const void           *src,
+                 const size_t         &size,
+                 const cudaMemcpyKind &kind);
+
+void free_device(const int  &rank,
+                       void *device_ptr);
+#endif
+
+
 #endif  // DECLARE_FUNCTIONS_HH

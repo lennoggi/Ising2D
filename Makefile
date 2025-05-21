@@ -29,10 +29,14 @@ endif
 OBJ = Indices_neighbors.o Main.o Update.o Write_lattice.o
 EXE = Ising2D_exe
 
+ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
+OBJ += CUDA_utils.o
+endif
+
 
 # Build all targets
 build: $(OBJ)
-	$(CXX) -o $(EXE) $(OBJ) ${LDFLAGS} -L$(HDF5_LIBS_DIR) $(HDF5_LIBS)
+	$(CXX) -o $(EXE) $(OBJ) ${LDFLAGS} -L$(HDF5_LIBS_DIR) $(HDF5_LIBS) -L$(CUDA_LIBS_DIR) $(CUDA_LIBS)
 
 Indices_neighbors.o: Indices_neighbors.cc Parameters.hh
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -c Indices_neighbors.cc
@@ -46,10 +50,18 @@ Write_lattice.o: Write_lattice.cc include/Declare_variables.hh include/Declare_f
 Update.o: Update.cc include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -c Update.cc
 
+ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
+CUDA_utils.o: CUDA_utils.cu include/Declare_functions.hh include/Macros.hh
+	$(CUCC) -c CUDA_utils.cu $(CUCC_FLAGS)
+endif
+
 
 
 # Remove the executable and all object files
+# NOTE: on make clean, the optionlist is not parsed and thus CXXFLAGS remains
+#   empty. Therefore, -DUSE_CUDA is not found in CXXFLAGS and CUDA_utils.o is
+#   not added to $(OBJ), so CUDA_utils.o must be removed explicitly.
 # NOTE: icpx generates *.o.tmp files which should be removed when cleaning
 .PHONY : clean
 clean:
-	${RM} ${EXE} ${OBJ} *.o.tmp
+	${RM} ${EXE} ${OBJ} CUDA_utils.o *.o.tmp

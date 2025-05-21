@@ -44,7 +44,8 @@
     } while(0)
 
 
-// Macro checking for errors coming from routines returning error codes
+/* Macro checking for errors coming from routines returning error codes as
+ * negative numbers (e.g., MPI and HDF5)                                        */
 #define CHECK_ERROR(rank, routine)                      \
 do {                                                    \
     const int err = routine;                            \
@@ -52,6 +53,17 @@ do {                                                    \
         ERROR(rank, "Routine '" << #routine <<          \
               "' returned error code " << err << ")");  \
     }                                                   \
+} while (0)
+
+
+// Macro checking for errors coming from CUDA routines returning error codes
+#define CHECK_ERROR_CUDA(rank, routine)                          \
+do {                                                             \
+    const cudaError_t err = routine;                             \
+    if (err != cudaSuccess) {                                    \
+        ERROR(rank, "Routine '" << #routine << "' failed: \"" << \
+                    cudaGetErrorString(err) << "\".");           \
+    }                                                            \
 } while (0)
 
 
