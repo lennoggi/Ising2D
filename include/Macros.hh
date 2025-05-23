@@ -5,6 +5,10 @@
 #include <sstream>   // So that 'msg_ss.str()'          works when the macros below are used
 #include <mpi.h>     // So that MPI_abort()             works when the macros below are used
 
+#ifdef USE_CUDA
+#include <curand.h>
+#endif
+
 
 // Macro printing an informative message
 #define INFO(rank, msg_ss)                        \

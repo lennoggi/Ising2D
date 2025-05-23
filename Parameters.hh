@@ -18,6 +18,23 @@
 #define NX1 384
 #define NX2 512
 
+/* Number of CUDA threads per block
+ * NOTE: the number of blocks ('grid size') is determined by the block size and
+ *   the size of the process-local lattice
+ * NOTE: CUDA schedules threads to be executed in warps of 32, so having less
+ *   than 32 threads per blocks (BLOCK_SIZE < 32) is NOT recommended, as it
+ *   leaves some of the warp slots unused. On the other hand, the typical
+ *   maximum number of threads per block on many GPU architectures is 1024, so
+ *   BLOCK_SIZE > 1024 is generally illegal. Also, maximizing the number of
+ *   threads per block (i.e., BLOCK_SIZE = 1024) is doesn't always improve
+ *   performance; in fact, it may sometimes HURT performance.
+ * RULE OF THUMB: BLOCK_SIZE = 128--256 is generally optimal, but the ultimate
+ *   answer can only be given by timing and/or profiling the application        */
+#ifdef USE_CUDA
+#define BLOCK_SIZE_X1 16
+#define BLOCK_SIZE_X2 16
+#endif
+
 
 // Number of lattice updates to reach thermal equilibrium
 #define NTHERM 1000

@@ -6,6 +6,7 @@
 
 static_assert(BETA > 0.);
 
+
 /* Need at least two processes per dimension for the parity-based ghost point
  * exchange to work                                                             */
 static_assert(NPROCS_X1 > 1);
@@ -21,6 +22,22 @@ static_assert(NX2 >= NPROCS_X2);
 
 static_assert(NX1 % NPROCS_X1 == 0);
 static_assert(NX2 % NPROCS_X2 == 0);
+
+
+#ifdef USE_CUDA
+static_assert(BLOCK_SIZE_X1 > 0);
+static_assert(BLOCK_SIZE_X2 > 0);
+
+static_assert(BLOCK_SIZE_X1 <= NX1/NPROCS_X1,
+              "The number of CUDA threads per block along X1 can't exceed the number of points in the process-local lattice along X1");
+static_assert(BLOCK_SIZE_X2 <= NX2/NPROCS_X2,
+              "The number of CUDA threads per block along X2 can't exceed the number of points in the process-local lattice along X2");
+
+static_assert(BLOCK_SIZE_X1*BLOCK_SIZE_X2 >= 32,
+              "Less than 32 CUDA threads per block lead to poor slot usage within each CUDA's thread warp, whose size is 32");
+static_assert(BLOCK_SIZE_X1*BLOCK_SIZE_X2 <= 1024,
+              "More than 1024 CUDA threads per block are unsupported on most (especially older) GPU architectures, and even then you might kill efficiency");
+#endif
 
 
 static_assert(NTHERM > 0);

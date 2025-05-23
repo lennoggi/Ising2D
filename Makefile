@@ -25,18 +25,22 @@ ifeq (, ${filter clean, ${MAKECMDGOALS}})
 endif
 
 
-# Objects to be built
+# Objects to be built from regular C++ (not CUDA) source files
 OBJ = Indices_neighbors.o Main.o Update.o Write_lattice.o
 EXE = Ising2D_exe
 
 ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
-OBJ += CUDA_utils.o
+OBJ += Random_numbers.o Utils.o
 endif
 
 
 # Build all targets
 build: $(OBJ)
+ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
 	$(CXX) -o $(EXE) $(OBJ) ${LDFLAGS} -L$(HDF5_LIBS_DIR) $(HDF5_LIBS) -L$(CUDA_LIBS_DIR) $(CUDA_LIBS)
+else
+	$(CXX) -o $(EXE) $(OBJ) ${LDFLAGS} -L$(HDF5_LIBS_DIR) $(HDF5_LIBS)
+endif
 
 Indices_neighbors.o: Indices_neighbors.cc Parameters.hh
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -c Indices_neighbors.cc
@@ -51,17 +55,21 @@ Update.o: Update.cc include/Declare_variables.hh include/Declare_functions.hh in
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -c Update.cc
 
 ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
-CUDA_utils.o: CUDA_utils.cu include/Declare_functions.hh include/Macros.hh
-	$(CUCC) -c CUDA_utils.cu $(CUCC_FLAGS)
+Random_numbers.o: Random_numbers.cu include/Declare_functions.hh include/Macros.hh
+	$(CUCC) -c Random_numbers.cu $(CUCC_FLAGS) -I$(HDF5_INC_DIR)
+
+Utils.o: Utils.cu include/Declare_functions.hh include/Macros.hh
+	$(CUCC) -c Utils.cu $(CUCC_FLAGS) -I$(HDF5_INC_DIR)
 endif
 
 
 
 # Remove the executable and all object files
 # NOTE: on make clean, the optionlist is not parsed and thus CXXFLAGS remains
-#   empty. Therefore, -DUSE_CUDA is not found in CXXFLAGS and CUDA_utils.o is
-#   not added to $(OBJ), so CUDA_utils.o must be removed explicitly.
+#   empty. Therefore, -DUSE_CUDA is not found in CXXFLAGS and the object files
+#   generated from .cu files are not added to $(OBJ), so Random_numbers.o and
+#   Utils.o must be removed explicitly.
 # NOTE: icpx generates *.o.tmp files which should be removed when cleaning
 .PHONY : clean
 clean:
-	${RM} ${EXE} ${OBJ} CUDA_utils.o *.o.tmp
+	${RM} ${EXE} ${OBJ} Random_numbers.o Utils.o *.o.tmp

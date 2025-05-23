@@ -27,21 +27,37 @@ void write_lattice(const int &rank,
 
 
 #ifdef USE_CUDA
-
 #include <cuda_runtime.h>
 
-int *allocate_int_device(const int    &rank,
-                         const size_t &size);
+template <typename T>
+T *allocate_device(const int    &rank,
+                   const size_t &num_elements);
 
-void copy_device(const int    &rank,
-                       void           *dest,
-                 const void           *src,
-                 const size_t         &size,
-                 const cudaMemcpyKind &kind);
+template <typename T>
+void copy_device(const int            &rank,
+                       T              *dest,
+                       T              *src,
+                 const size_t         &num_elements,
+                 const cudaMemcpyKind &copy_kind);
 
 void free_device(const int  &rank,
                        void *device_ptr);
+
+template <typename T> __global__
+void init_rng_device_kernel(T *rng_states_device,
+                            const size_t &seed,
+                            const size_t &nx,
+                            const size_t &ny);
+
+template <typename T>
+void init_rng_device(const int &rank,
+                     T *rng_states_device,
+                     const size_t &seed,
+                     const size_t &nx,
+                     const size_t &ny,
+                     const size_t &block_size_x,
+                     const size_t &block_size_y);
 #endif
 
 
-#endif  // DECLARE_FUNCTIONS_HH
+#endif
