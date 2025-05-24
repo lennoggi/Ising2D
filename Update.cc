@@ -11,12 +11,11 @@
 using namespace std;
 
 
-/* =============================================================================
- * Routine updating the process-local lattice by dividing the latter in four
- * equal parts and performing communications on each of them one after the other
- * NOTE: the above technique ensures the ghost points used to update points at
- *       the boundary of the process-local lattice are up to date
- * =============================================================================*/
+/* ============================================================================
+ * Routine updating the process-local lattice by first sweeping over 'white'
+ * points only, whose neighbors are all 'black', and then sweeping over 'black'
+ * points only, whose neighbors are all 'white'
+ * ============================================================================ */
 void update(const int                               &rank,
                   mt19937                           &gen,   // NOTE: can't be constant because dist changes the internal status of gen
                   uniform_real_distribution<double> &dist,  // NOTE: also non-const
