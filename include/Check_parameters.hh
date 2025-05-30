@@ -20,6 +20,9 @@ static_assert(NPROCS_X2 % 2 == 0);
 static_assert(NX1 >= NPROCS_X1);
 static_assert(NX2 >= NPROCS_X2);
 
+/* The number of points along each dimension in the process-local lattice must
+ * be even for the checkerboard lattice update pattern (see Update.cc and
+ * Update_device.cu) to work                                                    */
 static_assert(NX1 % NPROCS_X1 == 0);
 static_assert(NX2 % NPROCS_X2 == 0);
 
@@ -28,10 +31,10 @@ static_assert(NX2 % NPROCS_X2 == 0);
 static_assert(BLOCK_SIZE_X1 > 0);
 static_assert(BLOCK_SIZE_X2 > 0);
 
-static_assert(BLOCK_SIZE_X1 <= NX1/NPROCS_X1,
-              "The number of CUDA threads per block along X1 can't exceed the number of points in the process-local lattice along X1");
-static_assert(BLOCK_SIZE_X2 <= NX2/NPROCS_X2,
-              "The number of CUDA threads per block along X2 can't exceed the number of points in the process-local lattice along X2");
+static_assert(BLOCK_SIZE_X1 <= (NX1/NPROCS_X1)/2,
+              "The number of CUDA threads per block along X1 can't exceed twice the number of points in the process-local lattice along X1 (checkerboard lattice update pattern => Only half of the spins are updated within a single kernel call)");
+static_assert(BLOCK_SIZE_X2 <= (NX2/NPROCS_X2)/2,
+              "The number of CUDA threads per block along X2 can't exceed twice the number of points in the process-local lattice along X2 (checkerboard lattice update pattern => Only half of the spins are updated within a single kernel call)");
 
 static_assert(BLOCK_SIZE_X1*BLOCK_SIZE_X2 >= 32,
               "Less than 32 CUDA threads per block lead to poor slot usage within each CUDA's thread warp, whose size is 32");

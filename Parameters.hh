@@ -13,12 +13,15 @@
 #define NPROCS_X1 6
 #define NPROCS_X2 8
 
-/* Total number of points along the two lattice directions
+/* Total number of points along the two lattice dimensions
  * NOTE: both NX1 and NX2 must be EVEN integers                                  */
 #define NX1 384
 #define NX2 512
 
-/* Number of CUDA threads per block
+/* Number of CUDA threads per block along the two lattice dimensions
+ * NOTE: the pseudorandom-number-generation kernel runs on ALL of the interior
+ *   points of the process-local lattice, whereas the lattice update kernel only
+ *   runs on HALF of them ("red/black" checkerboard logic)
  * NOTE: the number of blocks ('grid size') is determined by the block size and
  *   the size of the process-local lattice
  * NOTE: CUDA schedules threads to be executed in warps of 32, so having less

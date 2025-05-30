@@ -26,11 +26,11 @@ endif
 
 
 # Objects to be built from regular C++ (not CUDA) source files
-OBJ = Indices_neighbors.o Main.o Update.o Write_lattice.o
+OBJ = Exchange_ghosts.o Indices_neighbors.o Main.o Update.o Write_lattice.o
 EXE = Ising2D_exe
 
 ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
-OBJ += Random_numbers.o Utils.o
+OBJ += Random_numbers.o Utils.o Update_device.o
 endif
 
 
@@ -41,6 +41,9 @@ ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
 else
 	$(CXX) -o $(EXE) $(OBJ) ${LDFLAGS} -L$(HDF5_LIBS_DIR) $(HDF5_LIBS)
 endif
+
+Exchange_ghosts.o: Exchange_ghosts.cc include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh
+	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -c Exchange_ghosts.cc
 
 Indices_neighbors.o: Indices_neighbors.cc Parameters.hh
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -c Indices_neighbors.cc
@@ -56,10 +59,13 @@ Update.o: Update.cc include/Declare_variables.hh include/Declare_functions.hh in
 
 ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
 Random_numbers.o: Random_numbers.cu include/Declare_functions.hh include/Macros.hh
-	$(CUCC) -c Random_numbers.cu $(CUCC_FLAGS) -I$(HDF5_INC_DIR)
+	$(CUCC) $(CUCC_FLAGS) -I$(HDF5_INC_DIR) -c Random_numbers.cu
 
 Utils.o: Utils.cu include/Declare_functions.hh include/Macros.hh
-	$(CUCC) -c Utils.cu $(CUCC_FLAGS) -I$(HDF5_INC_DIR)
+	$(CUCC) $(CUCC_FLAGS) -I$(HDF5_INC_DIR) -c Utils.cu
+
+Update_device.o: Update_device.cu include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
+	$(CUCC) $(CUCC_FLAGS) -I$(HDF5_INC_DIR) -c Update_device.cu
 endif
 
 
@@ -67,9 +73,9 @@ endif
 # Remove the executable and all object files
 # NOTE: on make clean, the optionlist is not parsed and thus CXXFLAGS remains
 #   empty. Therefore, -DUSE_CUDA is not found in CXXFLAGS and the object files
-#   generated from .cu files are not added to $(OBJ), so Random_numbers.o and
-#   Utils.o must be removed explicitly.
+#   generated from .cu files are not added to $(OBJ), so those object files must
+#   be removed explicitly.
 # NOTE: icpx generates *.o.tmp files which should be removed when cleaning
 .PHONY : clean
 clean:
-	${RM} ${EXE} ${OBJ} Random_numbers.o Utils.o *.o.tmp
+	${RM} ${EXE} ${OBJ} Random_numbers.o Utils.o Update_device.o *.o.tmp

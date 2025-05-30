@@ -9,7 +9,7 @@ constexpr inline int nx1loc = NX1/NPROCS_X1;
 constexpr inline int nx2loc = NX2/NPROCS_X2;
 
 /* Both nx1loc=NX1/NPROCS_X1 and nx2loc=NX2LOC/NPROCS_X2 must be EVEN for the
- * white/black update method to work (see Update.cc)                            */
+ * "red/black" update method to work (see Update.cc and Update_device.cu)       */
 static_assert(nx1loc % 2 == 0);
 static_assert(nx2loc % 2 == 0);
 
@@ -29,6 +29,9 @@ constexpr inline int nx1locp2_p1          = nx1loc + 3;
 constexpr inline int nx1loc_nx2loc        = nx1loc*nx2loc;
 constexpr inline int nx1loc_nx2locp2_p1   = nx1loc_nx2loc + 3;
 constexpr inline int nx1locp1_nx2locp2_p1 = nx1loc_nx2loc + 4;
+constexpr inline int nx2locp2_p1          = nx2loc + 3;
+constexpr inline int nx2locp2_p_nx2loc    = nx2loc_p2 + nx2loc;
+constexpr inline int nx2locp2_p_nx2locp1  = nx2loc_p2 + nx2loc_p1;
 
 
 #endif  // DECLARATIONS_HH

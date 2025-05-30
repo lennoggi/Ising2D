@@ -20,9 +20,9 @@ using namespace std;
 template <typename T>
 T *allocate_device(const int    &rank,
                    const size_t &num_elements) {
-    T *device_vec;
-    CHECK_ERROR_CUDA(rank, cudaMalloc(reinterpret_cast<void**>(&device_vec), num_elements*sizeof(T)));
-    return device_vec;
+    T *device_ptr;
+    CHECK_ERROR_CUDA(rank, cudaMalloc(reinterpret_cast<void**>(&device_ptr), num_elements*sizeof(T)));
+    return device_ptr;
 }
 
 template int*
@@ -38,22 +38,52 @@ allocate_device<curandStatePhilox4_32_10_t>(const int    &rank,
  * Wrapper routine around cudaMemcpy()
  * =================================== */
 template <typename T>
-void copy_device(const int            &rank,
-                       T              *dest,
-                       T              *src,
-                 const size_t         &num_elements,
+void copy_device(const int    &rank,
+                       T      *dest,
+                       T      *src,
+                 const size_t &num_elements,
                  const cudaMemcpyKind &copy_kind) {
     CHECK_ERROR_CUDA(rank, cudaMemcpy(reinterpret_cast<void*>(dest), reinterpret_cast<void*>(src),
-                     num_elements*sizeof(T), copy_kind));
+                                      num_elements*sizeof(T), copy_kind));
     return;
 }
 
 template void
-copy_device<int>(const int            &rank,
-                       int            *dest,
-                       int            *src,
-                 const size_t         &num_elements,
+copy_device<int>(const int    &rank,
+                       int    *dest,
+                       int    *src,
+                 const size_t &num_elements,
                  const cudaMemcpyKind &copy_kind);
+
+
+
+/* =====================================
+ * Wrapper routine around cudaMemcpy2D()
+ * ===================================== */
+template <typename T>
+void copy_device_2D(const int    &rank,
+                          T      *dest,
+                    const size_t &dest_stride,  // Number of elements between successive elements in the destination memory chunk. Usually set to 1 if contiguous or to n_columns if not.
+                          T      *src,
+                    const size_t &src_stride,   // Number of elements between successive elements in the source memory chunk. Usually set to 1 if contiguous or to n_columns if not.
+                    const size_t &width,        // Number of elements per row to copy
+                    const size_t &height,       // Number of rows to copy
+                    const cudaMemcpyKind &copy_kind) {
+    CHECK_ERROR_CUDA(rank, cudaMemcpy2D(reinterpret_cast<void*>(dest), dest_stride*sizeof(T),
+                                        reinterpret_cast<void*>(src),   src_stride*sizeof(T),
+                                        width*sizeof(T), height, copy_kind));
+    return;
+}
+
+template void
+copy_device_2D<int>(const int    &rank,
+                          int    *dest,
+                    const size_t &dest_stride,
+                          int    *src,
+                    const size_t &src_stride,
+                    const size_t &width,
+                    const size_t &height,
+                    const cudaMemcpyKind &copy_kind);
 
 
 

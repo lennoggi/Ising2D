@@ -82,12 +82,30 @@ int main(int argc, char **argv) {
 
     /* Initialize all the elements of the process-local lattice to 1 (but -1
      * would work as well) to minimize the entropy, so that thermalization time
-     * is minimized                                                             */
+     * is minimized
+     * NOTE: even if the lattice updates are offloaded to the device (i.e.,
+     *   USE_CUDA is defined, and so the process-local lattice is copied to the
+     *   device) the process-local lattice still needs to exist on the host to
+     *   perform I/O and measurements                                           */
     array<int, nx1locp2_nx2locp2> local_lattice;
 
     for (auto &site : local_lattice) {
         site = 1;
     }
+
+    #ifdef USE_CUDA
+    int *local_lattice_device = allocate_device<int>(rank, nx1locp2_nx2locp2);
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // XXX: cudaMemcpyHostToDevice can only be understood by nvc++.
+    //      Modify copy_device() to pass a keyword or enum parameter which
+    //      internally sets the CUDA memcpy kind.
+    copy_device(rank, local_lattice_device, local_lattice.data(), nx1locp2_nx2locp2, cudaMemcpyHostToDevice);
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    // XXX XXX XXX XXX XXX XXX
+    #endif
 
 
     // Write the initial lattice to file
@@ -111,14 +129,10 @@ int main(int argc, char **argv) {
     const auto seed = rd() + rank;  // Each rank must have a different seed
 
     #ifdef USE_CUDA
+    /* One RNG per INTERIOR lattice site, since on the GPU the update step
+     * happens ~simultaneously for all points within the process-local lattice  */
     curandStatePhilox4_32_10_t *rng_states_device = allocate_device<curandStatePhilox4_32_10_t>(rank, nx1loc_nx2loc);
-    /* One RNG per lattice site, since on the GPU the update step happens
-     * (ideally) simultaneously for all points within the process-local lattice */
     init_rng_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, seed, nx1loc, nx2loc, BLOCK_SIZE_X1, BLOCK_SIZE_X2);
-
-    int *local_lattice_device = allocate_device<int>(rank, nx1locp2_nx2locp2);
-    copy_device(rank, local_lattice_device, local_lattice.data(), nx1locp2_nx2locp2, cudaMemcpyHostToDevice);
-
     #else
     mt19937 gen(seed);
     uniform_real_distribution<double> dist(0., 1.);
@@ -134,34 +148,30 @@ int main(int argc, char **argv) {
 
     const auto thermalize_start = chrono::high_resolution_clock::now();
 
-    //for (auto n = decltype(NTHERM){1}; n <= NTHERM; ++n) {
-    //    // XXX XXX XXX XXX XXX XXX
-    //    // XXX XXX XXX XXX XXX XXX
-    //    // XXX XXX XXX XXX XXX XXX
-    //    //#ifdef USE_CUDA
-    //    //update_device(rank, gen, dist, indices_neighbors, local_lattice);
-    //    //#else
-    //    update(rank, gen, dist, indices_neighbors, local_lattice);
-    //    //#endif
-    //    // XXX XXX XXX XXX XXX XXX
-    //    // XXX XXX XXX XXX XXX XXX
-    //    // XXX XXX XXX XXX XXX XXX
-    //    // XXX XXX XXX XXX XXX XXX
+    for (auto n = decltype(NTHERM){1}; n <= NTHERM; ++n) {
+        #ifdef USE_CUDA
+        /* The update kernel only needs to see the INTERIOR of the process-local
+         * lattice, so pass nx1loc and nx2loc, not nx1loc_p2 and nx2loc_p2      */
+        update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors, local_lattice_device,
+                                                  nx1loc, nx2loc, BLOCK_SIZE_X1, BLOCK_SIZE_X2);
+        #else
+        update(rank, gen, dist, indices_neighbors, local_lattice);
+        #endif
 
-    //    #if (SAVE_LATTICE_THERM)
-    //    if (n % OUT_EVERY == 0) {
-    //        // XXX XXX XXX XXX XXX XXX
-    //        // XXX XXX XXX XXX XXX XXX
-    //        // XXX XXX XXX XXX XXX XXX
-    //        // XXX: copy the lattice back from the device to the host
-    //        // XXX XXX XXX XXX XXX XXX
-    //        // XXX XXX XXX XXX XXX XXX
-    //        // XXX XXX XXX XXX XXX XXX
-    //        write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_id);
-    //        INFO(rank, "Iteration " << n << " written to file");
-    //    }
-    //    #endif
-    //}
+        //#if (SAVE_LATTICE_THERM)
+        //if (n % OUT_EVERY == 0) {
+        //    // XXX XXX XXX XXX XXX XXX
+        //    // XXX XXX XXX XXX XXX XXX
+        //    // XXX XXX XXX XXX XXX XXX
+        //    // XXX: copy the lattice back from the device to the host
+        //    // XXX XXX XXX XXX XXX XXX
+        //    // XXX XXX XXX XXX XXX XXX
+        //    // XXX XXX XXX XXX XXX XXX
+        //    write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_id);
+        //    INFO(rank, "Iteration " << n << " written to file");
+        //}
+        //#endif
+    }
 
     const auto thermalize_end   = chrono::high_resolution_clock::now();
     const auto thermalize_time  = chrono::duration_cast<chrono::seconds>(thermalize_end - thermalize_start);
