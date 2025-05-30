@@ -158,19 +158,15 @@ int main(int argc, char **argv) {
         update(rank, gen, dist, indices_neighbors, local_lattice);
         #endif
 
-        //#if (SAVE_LATTICE_THERM)
-        //if (n % OUT_EVERY == 0) {
-        //    // XXX XXX XXX XXX XXX XXX
-        //    // XXX XXX XXX XXX XXX XXX
-        //    // XXX XXX XXX XXX XXX XXX
-        //    // XXX: copy the lattice back from the device to the host
-        //    // XXX XXX XXX XXX XXX XXX
-        //    // XXX XXX XXX XXX XXX XXX
-        //    // XXX XXX XXX XXX XXX XXX
-        //    write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_id);
-        //    INFO(rank, "Iteration " << n << " written to file");
-        //}
-        //#endif
+        #if (SAVE_LATTICE_THERM)
+        if (n % OUT_EVERY == 0) {
+            #ifdef USE_CUDA
+            copy_device(rank, local_lattice.data(), local_lattice_device, nx1locp2_nx2locp2, cudaMemcpyDeviceToHost);
+            #endif
+            write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_id);
+            INFO(rank, "Iteration " << n << " written to file");
+        }
+        #endif
     }
 
     const auto thermalize_end   = chrono::high_resolution_clock::now();
