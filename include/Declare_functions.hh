@@ -11,6 +11,10 @@ std::array<int, 6>
 set_indices_neighbors(const int &rank,
                       const int &nprocs);
 
+void exchange_ghosts(const int &rank,
+                     const std::array<int, 6> &indices_neighbors,
+                           int *local_lattice);
+
 void update(const int                                    &rank,
                   std::mt19937                           &gen,
                   std::uniform_real_distribution<double> &dist,
@@ -68,10 +72,6 @@ void init_rng_device(const int &rank,
                      const size_t &ny,
                      const size_t &block_size_x,
                      const size_t &block_size_y);
-
-void exchange_ghosts(const int &rank,
-                     const std::array<int, 6> &indices_neighbors,
-                           int *local_lattice);
 
 template <typename T> __global__
 void update_device_kernel(T   *rng_states_device,
