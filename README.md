@@ -28,6 +28,7 @@ Lorenzo Ennoggi (<le8016@rit.edu> / <lorenzo.ennoggi@gmail.com>)
    make -j8 options=OptionLists/<optionlist>
    ```
    where `<optionlist>` is the list of compiler options for your machine. For GPU builds, see the example optionlist `OptionLists/Vista_NVIDIA_CUDA.cfg`.
+
 3. Edit the job submission script for your machine as needed, or create a new one if your machine is not listed there
 4. Run
    ```
