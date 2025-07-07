@@ -164,7 +164,9 @@ int main(int argc, char **argv) {
             copy_device(rank, local_lattice.data(), local_lattice_device, nx1locp2_nx2locp2, cudaMemcpyDeviceToHost);
             #endif
             write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_id);
+            #if (VERYVERBOSE)
             INFO(rank, "Iteration " << n << " written to file");
+            #endif
         }
         #endif
     }

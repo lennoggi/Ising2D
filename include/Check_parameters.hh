@@ -56,10 +56,10 @@ static_assert(OUT_EVERY > 0);
 static_assert(OUTERR_ALL_RANKS or not OUTERR_ALL_RANKS);
 
 static_assert(VERBOSE     or not VERBOSE);
-//static_assert(VERYVERBOSE or not VERYVERBOSE);
-//#if (VERYVERBOSE)
-//static_assert(VERBOSE);
-//#endif
+static_assert(VERYVERBOSE or not VERYVERBOSE);
+#if (VERYVERBOSE)
+static_assert(VERBOSE);
+#endif
 
 
 #endif  // PARAMETERS_HH

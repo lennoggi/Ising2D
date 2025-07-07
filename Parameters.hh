@@ -4,19 +4,19 @@
 
 /* beta = 1/(kB*T) (kB = 1 here)
  * Critical value: 0.5*log(1 + sqrt(2)) ~= 0.4406868 (infinite lattice)                                 */
-#define BETA 0.5
+#define BETA 0.42
 
 
 /* Number of MPI processes along x and y
  * NOTE: be sure to request NPROCS_X1*NPROCS_X2 MPI processes in your job
  *       submission script                                                      */
-#define NPROCS_X1 6
+#define NPROCS_X1 8
 #define NPROCS_X2 8
 
 /* Total number of points along the two lattice dimensions
  * NOTE: both NX1 and NX2 must be EVEN integers                                  */
-#define NX1 384
-#define NX2 512
+#define NX1 128
+#define NX2 128
 
 /* Number of CUDA threads per block along the two lattice dimensions
  * NOTE: the pseudorandom-number-generation kernel runs on ALL of the interior
@@ -40,7 +40,7 @@
 
 
 // Number of lattice updates to reach thermal equilibrium
-#define NTHERM 1000
+#define NTHERM 200000
 
 /* Number of lattice updates during which the expectation values of all the
  * observables are computed after reaching thermal equilibrium                  */
@@ -54,7 +54,7 @@
 #define SAVE_LATTICE_CALC true
 
 // Output frequency
-#define OUT_EVERY 1
+#define OUT_EVERY 200000
 
 
 // Whether to have one stdout and one stderr file per MPI rank
@@ -62,7 +62,7 @@
 
 // Verbosity
 #define VERBOSE     true
-//#define VERYVERBOSE true
+#define VERYVERBOSE false
 
 
 #endif  // PARAMETERS_HH
