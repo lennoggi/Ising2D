@@ -23,19 +23,21 @@ using namespace std;
  * with both x1 and x2 being periodic (torus topology)
  * ==================================================================== */
 void exchange_ghosts(const int &rank,
-                     const array<int, 6> &indices_neighbors,
+                     const array<int, 6> &indices_neighbors_parity,
                            int *local_lattice)
 {
     // TODO TODO TODO TODO TODO TODO
     // TODO TODO TODO TODO TODO TODO
     // TODO TODO TODO TODO TODO TODO
-    // TODO: local_lattice can either be the host or device process-local lattice, but in the latter case
-    //      the MPI implementation must be CUDA-AWARE!
-    // TODO: support non-CUDA-aware MPI implementation (e.g. via a #define flag) too
+    // TODO: local_lattice can either be the host or device process-local
+    //       lattice, but in the latter case the MPI implementation must be
+    //       CUDA-AWARE!
+    // TODO: support non-CUDA-aware MPI implementations (e.g. via a #define
+    //       flag) too
     // TODO TODO TODO TODO TODO TODO
     // TODO TODO TODO TODO TODO TODO
     // TODO TODO TODO TODO TODO TODO
-    const auto &[x1index, x2index, x1down, x1up, x2down, x2up] = indices_neighbors;
+    const auto &[x1index, x2index, x1down, x1up, x2down, x2up] = indices_neighbors_parity;
 
     const int tag1 = 1;
     const int tag2 = 2;

@@ -26,7 +26,7 @@ endif
 
 
 # Objects to be built from regular C++ (not CUDA) source files
-OBJ = Exchange_ghosts.o Indices_neighbors.o Main.o Update.o Write_lattice.o
+OBJ = Indices_neighbors_parity.o Main.o Update.o Write_lattice.o
 EXE = Ising2D_exe
 
 ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
@@ -42,11 +42,8 @@ else
 	$(CXX) -o $(EXE) $(OBJ) ${LDFLAGS} -L$(HDF5_LIBS_DIR) $(HDF5_LIBS)
 endif
 
-Exchange_ghosts.o: Exchange_ghosts.cc include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh
-	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -c Exchange_ghosts.cc
-
-Indices_neighbors.o: Indices_neighbors.cc Parameters.hh
-	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -c Indices_neighbors.cc
+Indices_neighbors_parity.o: Indices_neighbors_parity.cc Parameters.hh
+	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -c Indices_neighbors_parity.cc
 
 Main.o: Main.cc include/Check_parameters.hh include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -c Main.cc

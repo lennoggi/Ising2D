@@ -66,17 +66,18 @@ int main(int argc, char **argv) {
     INFO(rank, "Process-local grid size: " << nx1loc << "*" << nx2loc);
 
 
-    /* Get the neighbors of the current process
-     * NOTE: this process' neighbors are needed by update(), so the return value
-     *   of set_indices_neighbors() is unpacked separately                      */
-    const auto &indices_neighbors = set_indices_neighbors(rank, nprocs);
-    const auto &[x1index, x2index, x1down, x1up, x2down, x2up] = indices_neighbors;
+    /* Get the neighbors and parity of the current process
+     * NOTE: this process' neighbors and parity are needed by update(), so the
+     *   return value of set_indices_neighbors_parity() is unpacked separately  */
+    const auto &indices_neighbors_parity = set_indices_neighbors_parity(rank, nprocs);
+    const auto &[x1index, x2index, x1down, x1up, x2down, x2up, parity] = indices_neighbors_parity;
 
     #if (VERBOSE)
     INFO(rank, "Indices of process " << rank << " along x1 and x2: " << x1index << ", " << x2index);
     INFO(rank, "Neighbors of process " << rank << ": " <<
            "x1down=" << x1down << ", x1up=" << x1up <<
          ", x2down=" << x2down << ", x2up=" << x2up);
+    INFO(rank, "Parity of process " << rank << ": " << (int) parity);
     #endif
 
 
@@ -120,7 +121,6 @@ int main(int argc, char **argv) {
     write_lattice(rank, nprocs, x1index, x2index, 0, local_lattice, file_id);
 
 
-
     /* Initialize the seed of the random number generator, either on the host
      * (using the Mersenne twister 19937 algorithm from the <random> header) or
      * on the device (using cuRAND and a Philox 4*32 10 generator).
@@ -139,7 +139,6 @@ int main(int argc, char **argv) {
     #endif
 
 
-
     // Let the lattice thermalize
     #if (VERBOSE)
     INFO(rank, "beta = " << BETA);
@@ -152,10 +151,9 @@ int main(int argc, char **argv) {
         #ifdef USE_CUDA
         /* The update kernel only needs to see the INTERIOR of the process-local
          * lattice, so pass nx1loc and nx2loc, not nx1loc_p2 and nx2loc_p2      */
-        update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors, local_lattice_device,
-                                                  nx1loc, nx2loc, BLOCK_SIZE_X1, BLOCK_SIZE_X2);
+        update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity, local_lattice_device);
         #else
-        update(rank, gen, dist, indices_neighbors, local_lattice);
+        update(rank, gen, dist, indices_neighbors_parity, local_lattice);
         #endif
 
         #if (SAVE_LATTICE_THERM)

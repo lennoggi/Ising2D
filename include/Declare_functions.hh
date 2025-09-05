@@ -7,18 +7,18 @@
 #include "Declare_variables.hh"
 
 
-std::array<int, 6>
-set_indices_neighbors(const int &rank,
-                      const int &nprocs);
+std::array<int, 7>
+set_indices_neighbors_parity(const int &rank,
+                             const int &nprocs);
 
 void exchange_ghosts(const int &rank,
-                     const std::array<int, 6> &indices_neighbors,
+                     const std::array<int, 7> &indices_neighbors_parity,
                            int *local_lattice);
 
 void update(const int                                    &rank,
                   std::mt19937                           &gen,
                   std::uniform_real_distribution<double> &dist,
-            const std::array<int, 6>                     &indices_neighbors,
+            const std::array<int, 7>                     &indices_neighbors_parity,
                   std::array<int, nx1locp2_nx2locp2>     &local_lattice);
 
 void write_lattice(const int &rank,
@@ -76,7 +76,6 @@ void init_rng_device(const int &rank,
 template <typename T> __global__
 void update_device_kernel(T   *rng_states_device,
                           int *local_lattice_device,
-                          const int    color,
                           const size_t nx,
                           const size_t ny,
                                 int    *out_of_bounds_device_ptr);
@@ -84,12 +83,8 @@ void update_device_kernel(T   *rng_states_device,
 template <typename T>
 void update_device(const int &rank,
                          T   *rng_states_device,
-                   const std::array<int, 6> &indices_neighbors,
-                         int    *local_lattice_device,
-                   const size_t &nx,
-                   const size_t &ny,
-                   const size_t &block_size_x,
-                   const size_t &block_size_y);
+                   const std::array<int, 7> &indices_neighbors_parity,
+                         int    *local_lattice_device);
 #endif
 
 

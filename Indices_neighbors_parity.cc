@@ -26,9 +26,9 @@ using namespace std;
  *   - Hard boundary on e.g. x with fixed +1 or -1 boundary points
  *   - (...)
  */
-array<int, 6>
-set_indices_neighbors(const int &rank,
-                      const int &nprocs) {
+array<int, 7>
+set_indices_neighbors_parity(const int &rank,
+                             const int &nprocs) {
     const auto indices = div(rank, NPROCS_X2);
     const auto x1index = indices.quot;
     const auto x2index = indices.rem;
@@ -50,5 +50,18 @@ set_indices_neighbors(const int &rank,
     assert(x2down >= 0 and x2down < nprocs);
     assert(x2up   >= 0 and x2up   < nprocs);
 
-    return array<int, 6> {x1index, x2index, x1down, x1up, x2down, x2up};
+
+    // This relies on having an EVEN number of processes along x1 and x2
+    const bool parity = ((x1index + rank) & 1);
+
+    // Sanity check: the full lattice should look like a 'chessboard'
+    const array<int, 4> neighbors = {x1down, x1up, x2down, x2up};
+
+    for (const auto &nb : neighbors) {
+        const int  x1index_nb = nb/NPROCS_X2;
+        const bool parity_nb  = ((x1index_nb + nb) & 1);
+        assert(parity_nb != parity);
+    }
+
+    return array<int, 7> {x1index, x2index, x1down, x1up, x2down, x2up, parity};
 }
