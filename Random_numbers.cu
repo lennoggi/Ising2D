@@ -2,6 +2,8 @@
 #include "include/Declare_functions.hh"
 #include "include/Macros.hh"
 
+#include "Parameters.hh"
+
 
 /* =======================================================================
  * Actual kernel initializing the RNG on the device (i.e., wrapper routine
@@ -10,21 +12,16 @@
 template <typename T> __global__
 void init_rng_device_kernel(T *rng_states_device,
                             const size_t seed,
-                            const size_t nx,
-                            const size_t ny,
+                            const size_t nx,  // nx1loc
+                            const size_t ny,  // nx2loc
                                   int    *out_of_bounds_device_ptr) {
-    const auto i  = blockIdx.x*blockDim.x + threadIdx.x;
-    const auto j  = blockIdx.y*blockDim.y + threadIdx.y;
+    const auto i = blockIdx.x*blockDim.x + threadIdx.x;
+    const auto j = blockIdx.y*blockDim.y + threadIdx.y;
 
-    /* Safety step: make sure the threads don't access memory they shouldn't
-     * NOTE: this should never happen if there aren't more threads than points
-     *   in the process-local lattice along any given dimension, which we
-     *   enforce in include/Check_parameters.hh
-     * NOTE: we actually enforce that there are no more threads than HALF of the
-     *   number of process-local lattice sites along each dimension because of
-     *   the "red/black" checkerboard lattice update pattern                    */
-    if (i >= nx or j >= ny) {
-        // Capture out-of-bounds error via an error flag
+    // Capture out-of-bounds errors via an error flag
+    if (i < 0 or i >= nx or
+        j < 0 or j >= ny)
+    {
         atomicExch(out_of_bounds_device_ptr, 1);
         return;
     }
@@ -56,16 +53,25 @@ template <typename T>
 void init_rng_device(const int &rank,
                      T *rng_states_device,
                      const size_t &seed,
-                     const size_t &nx,
-                     const size_t &ny,
-                     const size_t &block_size_x,
-                     const size_t &block_size_y) {
+                     // XXX: not needed
+                     //const size_t &nx,
+                     //const size_t &ny,
+                     //const size_t &block_size_x,
+                     //const size_t &block_size_y) {
     // Shape of the CUDA thread block
-    dim3 block(block_size_x, block_size_y);
+    /* NOTE: launch the RNG kernel on the process-local lattice using a single
+     *   block if the process-local lattice is small enough, or use multiple
+     *   blocks of MAX_BLOCK_SIZE_X1*MAX_BLOCK_SIZE_X2 threads each otherwise   */
+    constexpr int block_size_x1 = std::min(nx1loc, MAX_BLOCK_SIZE_X1);
+    constexpr int block_size_x2 = std::min(nx2loc, MAX_BLOCK_SIZE_X2);
+    dim3 block(block_size_x1, block_size_x2);
 
     // Shape of the CUDA block grid
-    dim3 grid((nx + block.x - 1)/block.x,   // block.x == block_size_x
-              (ny + block.y - 1)/block.y);  // block.y == block_size_y
+    constexpr int grid_size_x1= std::ceil(nx1loc/block_size_x1);
+    constexpr int grid_size_x2= std::ceil(nx2loc/block_size_x2);
+    dim3 grid(grid_size_x1_quarter, grid_size_x2_quarter);
+    //dim3 grid((nx1loc + block.x - 1)/block.x,   // block.x == block_size_x1
+    //          (nx2loc + block.y - 1)/block.y);  // block.y == block_size_x2
 
     // No out-of-bounds errors to begin with
     int  out_of_bounds = 0;
@@ -91,8 +97,9 @@ void init_rng_device(const int &rank,
 template void
 init_rng_device<curandStatePhilox4_32_10_t>(const int &rank,
                                             curandStatePhilox4_32_10_t *rng_states_device,
-                                            const size_t &seed,
-                                            const size_t &nx,
-                                            const size_t &ny,
-                                            const size_t &block_size_x,
-                                            const size_t &block_size_y);
+                                            const size_t &seed);
+                                            // XXX: not needed
+                                            //const size_t &nx,
+                                            //const size_t &ny,
+                                            //const size_t &block_size_x,
+                                            //const size_t &block_size_y);

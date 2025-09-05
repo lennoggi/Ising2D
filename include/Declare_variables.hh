@@ -42,7 +42,7 @@ constexpr inline int block_size_x2 = std::min(nx2loc_half, MAX_BLOCK_SIZE_X2);
 
 // Helper variables for communication
 //constexpr inline int nx1locp2_p1          = nx1loc + 3;
-//constexpr inline int nx1loc_nx2loc        = nx1loc*nx2loc;
+constexpr inline int nx1loc_nx2loc        = nx1loc*nx2loc;
 //constexpr inline int nx1loc_nx2locp2_p1   = nx1loc_nx2loc + 3;
 //constexpr inline int nx1locp1_nx2locp2_p1 = nx1loc_nx2loc + 4;
 //constexpr inline int nx2locp2_p1          = nx2loc + 3;

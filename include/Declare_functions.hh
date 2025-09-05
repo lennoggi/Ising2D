@@ -67,11 +67,7 @@ void init_rng_device_kernel(T *rng_states_device,
 template <typename T>
 void init_rng_device(const int &rank,
                      T *rng_states_device,
-                     const size_t &seed,
-                     const size_t &nx,
-                     const size_t &ny,
-                     const size_t &block_size_x,
-                     const size_t &block_size_y);
+                     const size_t &seed);
 
 template <typename T> __global__
 void update_device_kernel(T   *rng_states_device,
@@ -84,7 +80,7 @@ template <typename T>
 void update_device(const int &rank,
                          T   *rng_states_device,
                    const std::array<int, 7> &indices_neighbors_parity,
-                         int    *local_lattice_device);
+                         int *local_lattice_device);
 #endif
 
 

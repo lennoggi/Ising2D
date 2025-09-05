@@ -18,6 +18,7 @@
 #define NX1 128
 #define NX2 128
 
+
 /* The lattice update kernel is launched on each quarter of the process-local
  * lattice (see Update_device.cu) using a single thread block of
  * (NX1/NPROCS_X1)*(NX2/NPROCS_X2) threads. However, CUDA limits the number of
@@ -26,11 +27,15 @@
  * the ultimate answer can only be given by timing and/or profiling the
  * application). Therefore, we provide parameters MAX_BLOCK_SIZE_X1 and
  * MAX_BLOCK_SIZE_X2 to limit the number of threads per block.
+ *
  * NOTE: CUDA schedules threads to be executed in warps of 32, so having less
- *   than 32 threads per blocks (BLOCK_SIZE < 32) is NOT recommended, as it
- *   leaves some of the warp slots unused.
- * RULE OF THUMB: BLOCK_SIZE = 128--256 is generally optimal, but the ultimate
- *   answer can only be given by timing and/or profiling the application        */
+ *   than 32 threads per blocks (MAX_BLOCK_SIZE_X1*MAX_BLOCK_SIZE_X2 < 32) is
+ *   NOT recommended (and in fact forbidden by include/Check_parameters.hh), as
+ *   that would leave some of the warp slots unused.
+ *
+ * RULE OF THUMB: MAX_BLOCK_SIZE_X1*MAX_BLOCK_SIZE_X2 = 128--256 is generally
+ *   optimal, but the ultimate answer can only be given by timing and/or
+ *   profiling the application                                                  */
 #ifdef USE_CUDA
 #define MAX_BLOCK_SIZE_X1 16
 #define MAX_BLOCK_SIZE_X2 16
