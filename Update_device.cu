@@ -25,10 +25,9 @@ void update_device_kernel(T      *rng_states_device_quarter,
     const auto i = blockIdx.x*blockDim.x + threadIdx.x;
     const auto j = blockIdx.y*blockDim.y + threadIdx.y;
 
-    // Capture out-of-bounds errors via an error flag
-    if (i < 0 or i >= nx or
-        j < 0 or j >= ny)
-    {
+    /* Capture out-of-bounds errors via an error flag
+     * NOTE: no need to check if i<0 or j<0 because nx and ny are size_t        */
+    if (i >= nx or j >= ny) {
         atomicExch(out_of_bounds_device_ptr, 1);
         return;
     }
@@ -74,11 +73,6 @@ void update_device(const int &rank,
                          T   *rng_states_device,
                    const array<int, 7> &indices_neighbors_parity,
                          int *local_lattice_device) {
-                   // XXX: not needed
-                   //const size_t &nx,  // nx1loc
-                   //const size_t &ny,  // nx2loc
-                   //const size_t &block_size_x,
-                   //const size_t &block_size_y) {
     const auto &[x1index, x2index, x1down, x1up, x2down, x2up, parity] = indices_neighbors_parity;
 
     /* Arrays encoding which processes rows (i.e. x data chunks) and columns
@@ -251,8 +245,3 @@ update_device<curandStatePhilox4_32_10_t>(const int &rank,
                                           curandStatePhilox4_32_10_t *rng_states_device,
                                           const array<int, 7> &indices_neighbors_parity,
                                                 int    *local_lattice_device);
-                                          // XXX: not needed
-                                          //const size_t &nx,
-                                          //const size_t &ny,
-                                          //const size_t &block_size_x,
-                                          //const size_t &block_size_y); 

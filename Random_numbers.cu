@@ -18,10 +18,9 @@ void init_rng_device_kernel(T *rng_states_device,
     const auto i = blockIdx.x*blockDim.x + threadIdx.x;
     const auto j = blockIdx.y*blockDim.y + threadIdx.y;
 
-    // Capture out-of-bounds errors via an error flag
-    if (i < 0 or i >= nx or
-        j < 0 or j >= ny)
-    {
+    /* Capture out-of-bounds errors via an error flag
+     * NOTE: no need to check if i<0 or j<0 because nx and ny are size_t        */
+    if (i >= nx or j >= ny) {
         atomicExch(out_of_bounds_device_ptr, 1);
         return;
     }
@@ -52,12 +51,7 @@ init_rng_device_kernel<curandStatePhilox4_32_10_t>(curandStatePhilox4_32_10_t *r
 template <typename T>
 void init_rng_device(const int &rank,
                      T *rng_states_device,
-                     const size_t &seed,
-                     // XXX: not needed
-                     //const size_t &nx,
-                     //const size_t &ny,
-                     //const size_t &block_size_x,
-                     //const size_t &block_size_y) {
+                     const size_t &seed) {
     // Shape of the CUDA thread block
     /* NOTE: launch the RNG kernel on the process-local lattice using a single
      *   block if the process-local lattice is small enough, or use multiple
@@ -67,9 +61,9 @@ void init_rng_device(const int &rank,
     dim3 block(block_size_x1, block_size_x2);
 
     // Shape of the CUDA block grid
-    constexpr int grid_size_x1= std::ceil(nx1loc/block_size_x1);
-    constexpr int grid_size_x2= std::ceil(nx2loc/block_size_x2);
-    dim3 grid(grid_size_x1_quarter, grid_size_x2_quarter);
+    constexpr int grid_size_x1 = std::ceil(nx1loc/block_size_x1);
+    constexpr int grid_size_x2 = std::ceil(nx2loc/block_size_x2);
+    dim3 grid(grid_size_x1, grid_size_x2);
     //dim3 grid((nx1loc + block.x - 1)/block.x,   // block.x == block_size_x1
     //          (nx2loc + block.y - 1)/block.y);  // block.y == block_size_x2
 
@@ -78,7 +72,7 @@ void init_rng_device(const int &rank,
     int *out_of_bounds_device_ptr = allocate_device<int>(rank, 1);
     copy_device<int>(rank, out_of_bounds_device_ptr, &out_of_bounds, 1, cudaMemcpyHostToDevice);
 
-    init_rng_device_kernel<T><<<grid, block>>>(rng_states_device, seed, nx, ny, out_of_bounds_device_ptr);
+    init_rng_device_kernel<T><<<grid, block>>>(rng_states_device, seed, nx1loc, nx2loc, out_of_bounds_device_ptr);
 
     CHECK_ERROR_CUDA(rank, cudaGetLastError());  // Capture potential errors from the kernel
     CHECK_ERROR_CUDA(rank, cudaDeviceSynchronize());
@@ -98,8 +92,3 @@ template void
 init_rng_device<curandStatePhilox4_32_10_t>(const int &rank,
                                             curandStatePhilox4_32_10_t *rng_states_device,
                                             const size_t &seed);
-                                            // XXX: not needed
-                                            //const size_t &nx,
-                                            //const size_t &ny,
-                                            //const size_t &block_size_x,
-                                            //const size_t &block_size_y);
