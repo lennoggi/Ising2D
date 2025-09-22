@@ -17,51 +17,63 @@ using namespace std;
  * kernel only knows it has to update a grid of points)
  * ======================================================================== */
 template <typename T> __global__
-void update_device_kernel(T      *rng_states_device_quarter,
-                          int *local_lattice_device_quarter,
-                          const size_t nx,  // nx1loc_half
-                          const size_t ny,  // nx1loc_half
-                                int    *out_of_bounds_device_ptr) {
-    const auto i = blockIdx.x*blockDim.x + threadIdx.x;
-    const auto j = blockIdx.y*blockDim.y + threadIdx.y;
+void update_device_kernel(T      *rng_states_device,  // XXX: this doesn't have ghosts, so it must be indexed differently
+                          int *local_lattice_device,
+                          const size_t imin,
+                          const size_t jmin,
+                          const size_t nx,      // nx1loc_half
+                          const size_t ny,      // nx2loc_half
+                          const size_t ypitch,  // nx2loc_p2
+                                int    *error_flag_device_ptr) {
+    const auto iloc = blockIdx.x*blockDim.x + threadIdx.x;
+    const auto jloc = blockIdx.y*blockDim.y + threadIdx.y;
 
-    /* Capture out-of-bounds errors via an error flag
+    /* Capture errors via an error flag
      * NOTE: no need to check if i<0 or j<0 because nx and ny are size_t        */
-    if (i >= nx or j >= ny) {
-        atomicExch(out_of_bounds_device_ptr, 1);
+    if (iloc >= nx or jloc >= ny or
+        imin < 1   or jmin < 1   or
+        ypitch <= 2)
+    {
+        atomicExch(error_flag_device_ptr, 1);
         return;
     }
 
-    const auto ij  = i*ny + j;
-    const auto ipj = ij + ny;  // (i+1)*ny + j
-    const auto imj = ij - ny;  // (i-1)*ny + j
-    const auto ijp = ij + 1;   // i*ny + (j+1)
-    const auto ijm = ij - 1;   // i*ny + (j-1)
+    const auto i = imin + iloc;
+    const auto j = jmin + jloc;
 
-    const auto f = -(  local_lattice_device_quarter[ipj]
-                       + local_lattice_device_quarter[imj]
-                       + local_lattice_device_quarter[ijp]
-                       + local_lattice_device_quarter[ijm]);
+    const auto ij  = i*ypitch + j;
+    const auto ipj = ij + ypitch;  // (i+1)*ypitch + j
+    const auto imj = ij - ypitch;  // (i-1)*ypitch + j
+    const auto ijp = ij + 1;       // i*ypitch + (j+1)
+    const auto ijm = ij - 1;       // i*ypitch + (j-1)
+
+    const auto f = -(  local_lattice_device[ipj]
+                     + local_lattice_device[imj]
+                     + local_lattice_device[ijp]
+                     + local_lattice_device[ijm]);
     constexpr auto _2beta = 2.*BETA;
     const double    prob  = 1./(1. + exp(_2beta*f));  // exp(-BETA*f)/(exp(-BETA*f) + exp(BETA*f))
 
     /* NOTE: rng_states_device only covers the interior, so it must be
-     *       indexed using i and j                                          */
-          auto   rng_state        = rng_states_device_quarter[ij];
+     *       indexed using i-1, j-1 with ypitch-2(=nx2loc) columns              */
+    const auto   idx_rng          = (i-1)*(ypitch-2) + j-1;
+          auto   rng_state        = rng_states_device[idx_rng];
     const double trial            = curand_uniform_double(&rng_state);
-    rng_states_device_quarter[ij] = rng_state;  // Update the RNG state after curand_uniform_double() has modified it
-
-    local_lattice_device_quarter[ij] = (trial < prob) ? 1 : -1;
+    rng_states_device[idx_rng]    = rng_state;  // Update the RNG state after curand_uniform_double() has modified it
+    local_lattice_device[idx_rng] = (trial < prob) ? 1 : -1;
 
     return;
 }
 
 template __global__ void
-update_device_kernel<curandStatePhilox4_32_10_t>(curandStatePhilox4_32_10_t *rng_states_device_quarter,
-                                                       int                  *local_lattice_device_quarter,
+update_device_kernel<curandStatePhilox4_32_10_t>(curandStatePhilox4_32_10_t *rng_states_device,
+                                                       int                  *local_lattice_device,
+                                                 const size_t imin,
+                                                 const size_t jmin,
                                                  const size_t nx,
                                                  const size_t ny,
-                                                       int    *out_of_bounds_device_ptr);
+                                                 const size_t ypitch,
+                                                       int    *error_flag_device_ptr);
 
 
 
@@ -112,15 +124,11 @@ void update_device(const int &rank,
      * individual spins.                                                        */
     int count = 0;
 
-    /* Buffers needed to store the RNG states and the lattice data for one
-     * quarter of the process-local lattice                                     */
-    T   *rng_states_device_quarter    = allocate_device<T>  (rank, nx1lochalf_nx2lochalf);
-    int *local_lattice_device_quarter = allocate_device<int>(rank, nx1lochalf_nx2lochalf);
-
     for (int kx1 = 0; kx1 < 2; ++kx1) {
         const auto sx1  = kx1*nx1loc_half;
-        //const auto imin = sx1 + 1;  // XXX: not needed
+        const auto imin = sx1 + 1;
         //const auto imax = imin + nx1loc_half;
+        const auto idx_imin = imin*nx2loc_p2;
 
         const auto isend = (kx1 == 0) ? 1 : nx1loc;
         const auto irecv = (kx1 == 0) ? nx1loc_p1 : 0;
@@ -129,9 +137,9 @@ void update_device(const int &rank,
         const auto irecv_idx = irecv*nx2loc_p2;
 
         for (int kx2 = 0; kx2 < 2; ++kx2) {
-            const int sx2  = kx2*nx2loc_half;
-            const int jmin = sx2 + 1;
-            //const int jmax = jmin + nx2loc_half;  // XXX: not needed
+            const auto sx2  = kx2*nx2loc_half;
+            const auto jmin = sx2 + 1;
+            //const int jmax = jmin + nx2loc_half;
 
             /* -------------------------------------------------------
              * Update the current quarter of the process-local lattice
@@ -154,35 +162,21 @@ void update_device(const int &rank,
 
             // No out-of-bounds errors to begin with
             int  out_of_bounds = 0;
-            int *out_of_bounds_device_ptr = allocate_device<int>(rank, 1);
-            copy_device<int>(rank, out_of_bounds_device_ptr, &out_of_bounds, 1, cudaMemcpyHostToDevice);
+            int *error_flag_device_ptr = allocate_device<int>(rank, 1);
+            copy_device<int>(rank, error_flag_device_ptr, &out_of_bounds, 1, cudaMemcpyHostToDevice);
 
-
-            /* Pack the current quarter's data for 'rng_states_device' and
-             * 'local_lattice_device' into temporary buffers and launch the
-             * update kernel on the current quarter                             */
-            for (auto i = decltype(nx1loc_half){1}; i <= nx1loc_half; ++i) {
-                const auto i_idx_quarter_m1 =     (i-1)*nx2loc_p2 - 1;
-                const auto i_idx_full_p_sx2 = (i + sx1)*nx2loc_p2 + sx2;
-
-                for (auto j = decltype(nx2loc_half){1}; j <= nx2loc_half; ++j) {
-                    const auto idx_quarter = i_idx_quarter_m1 + j;  //     (i-1)*nx2loc_p2 + (j-1) 
-                    const auto idx_full    = i_idx_full_p_sx2 + j;  // (i + sx1)*nx2loc_p2 + (j + sx2)
-
-                       rng_states_device_quarter[idx_quarter] =    rng_states_device[idx_full];
-                    local_lattice_device_quarter[idx_quarter] = local_lattice_device[idx_full];
-                }
-            }
-
-            update_device_kernel<<<grid, block>>>(rng_states_device_quarter, local_lattice_device_quarter, nx1loc_half, nx2loc_half, out_of_bounds_device_ptr);
-
+            update_device_kernel<<<grid, block>>>(rng_states_device, local_lattice_device,
+                                                  imin, jmin,                // Start indices
+                                                  nx1loc_half, nx2loc_half,  // Row and column extents
+                                                  nx2loc_p2,                 // Column pitch
+                                                  error_flag_device_ptr);
 
             // Capture potential errors from the kernel
             CHECK_ERROR_CUDA(rank, cudaGetLastError());
             CHECK_ERROR_CUDA(rank, cudaDeviceSynchronize());
 
-            copy_device<int>(rank, &out_of_bounds, out_of_bounds_device_ptr, 1, cudaMemcpyDeviceToHost);
-            free_device(rank, out_of_bounds_device_ptr);
+            copy_device<int>(rank, &out_of_bounds, error_flag_device_ptr, 1, cudaMemcpyDeviceToHost);
+            free_device(rank, error_flag_device_ptr);
 
             if (out_of_bounds != 0) {
                 ERROR(rank, "update_device_kernel() returned out-of-bounds error (quarter ("
@@ -203,37 +197,52 @@ void update_device(const int &rank,
             /* Set up the column chunks to be sent out
              * NOTE: no need to copy the row data to a separate buffer, since
              *       all the spins along a given row are contiguous in memory   */
-            array<int, nx1loc_half> x2out, x2in;
+            int *x2out_device = allocate_device<int>(rank, nx1loc_half);
+            int *x2in_device  = allocate_device<int>(rank, nx1loc_half);
 
-            for (auto i = decltype(nx1loc_half){1}; i <= nx1loc_half; ++i) {
-                x2out.at(i-1) = local_lattice_device[(i + sx1)*nx2loc_p2 + jsend];  // local_lattice_device[i + sx1][jsend]
-            }
+            copy_device_2D<int>(rank,
+                // Destination: 1 element between successive elements (row vector)
+                 x2out_device, 1,
+                // Source: first element has [i,j] = [imin, jsend], and there are nx2loc_p2 elements between successive elements in the column
+                &local_lattice_device[idx_imin + jsend], nx2loc_p2,
+                // Copy 1 elements per row, nx1loc_half rows (i.e., copy a column of local_lattice_device)
+                1, nx1loc_half,
+                // NOTE: using a GPU buffer makes the copy faster, but assumes a GPU-aware MPI implementation (see below)
+                cudaMemcpyDeviceToDevice);
 
-            // Exchange the current quarter's ghosts
+            /* Exchange the current quarter's ghosts
+             * NOTE: this assumes a GPU-aware MPI implementation, since
+             *   MPI_Send() and MPI_Recv() must be able to handle GPU pointers  */
             if (parity) {
                 CHECK_ERROR(rank, MPI_Send(&local_lattice_device[isend_idx_psx2_p1], nx2loc_half, MPI_INT, x1send.at(count), tag1, MPI_COMM_WORLD));
                 CHECK_ERROR(rank, MPI_Recv(&local_lattice_device[irecv_idx_psx2_p1], nx2loc_half, MPI_INT, x1recv.at(count), tag2, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-                CHECK_ERROR(rank, MPI_Send(x2out.data(),                             nx1loc_half, MPI_INT, x2send.at(count), tag3, MPI_COMM_WORLD));
-                CHECK_ERROR(rank, MPI_Recv(x2in.data(),                              nx1loc_half, MPI_INT, x2recv.at(count), tag4, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+                CHECK_ERROR(rank, MPI_Send(x2out_device,                             nx1loc_half, MPI_INT, x2send.at(count), tag3, MPI_COMM_WORLD));
+                CHECK_ERROR(rank, MPI_Recv(x2in_device,                              nx1loc_half, MPI_INT, x2recv.at(count), tag4, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
             } else {
                 CHECK_ERROR(rank, MPI_Recv(&local_lattice_device[irecv_idx_psx2_p1], nx2loc_half, MPI_INT, x1recv.at(count), tag1, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
                 CHECK_ERROR(rank, MPI_Send(&local_lattice_device[isend_idx_psx2_p1], nx2loc_half, MPI_INT, x1send.at(count), tag2, MPI_COMM_WORLD));
-                CHECK_ERROR(rank, MPI_Recv(x2in.data(),                              nx1loc_half, MPI_INT, x2recv.at(count), tag3, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
-                CHECK_ERROR(rank, MPI_Send(x2out.data(),                             nx1loc_half, MPI_INT, x2send.at(count), tag4, MPI_COMM_WORLD));
+                CHECK_ERROR(rank, MPI_Recv(x2in_device,                              nx1loc_half, MPI_INT, x2recv.at(count), tag3, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
+                CHECK_ERROR(rank, MPI_Send(x2out_device,                             nx1loc_half, MPI_INT, x2send.at(count), tag4, MPI_COMM_WORLD));
             }
 
             // Store the column chunk received into the ghost column
-            for (auto i = decltype(nx1loc_half){1}; i <= nx1loc_half; ++i) {
-                local_lattice_device[(i + sx1)*nx2loc_p2 + jrecv] = x2in.at(i-1);  // local_lattice[i + sx1][jrecv]
-            }
+            copy_device_2D<int>(rank,
+                // Destination: first element has [i,j] = [imin, jrecv], and there are nx2loc_p2 elements between successive elements in the column
+                &local_lattice_device[idx_imin + jrecv], nx2loc_p2,
+                // Source: 1 element between successive elements (row vector)
+                 x2in_device, 1,
+                // CudaMemcpy2D() treats x2in_device as a 2D buffer (column vector), so we still copy 1 element per row and nx1loc_half rows 
+                1, nx1loc_half,
+                // NOTE: using a GPU buffer makes the copy faster, but assumes a GPU-aware MPI implementation (see above)
+                cudaMemcpyDeviceToDevice);
+
+            free_device(rank, x2out_device);
+            free_device(rank, x2in_device);
 
             // Move to the next quarter
             ++count;
         }
     }
-
-    free_device(rank, rng_states_device_quarter);
-    free_device(rank, local_lattice_device_quarter);
 
     return;
 }

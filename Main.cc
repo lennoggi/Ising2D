@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
     /* One RNG per INTERIOR lattice site, since on the GPU the update step
      * happens ~simultaneously for all points within the process-local lattice  */
     curandStatePhilox4_32_10_t *rng_states_device = allocate_device<curandStatePhilox4_32_10_t>(rank, nx1loc_nx2loc);
-    init_rng_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, seed); //XXX; remove //, nx1loc, nx2loc, BLOCK_SIZE_X1, BLOCK_SIZE_X2);
+    init_rng_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, seed);
     #else
     mt19937 gen(seed);
     uniform_real_distribution<double> dist(0., 1.);

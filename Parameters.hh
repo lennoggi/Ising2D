@@ -10,8 +10,8 @@
 /* Number of MPI processes along x and y
  * NOTE: be sure to request NPROCS_X1*NPROCS_X2 MPI processes in your job
  *       submission script                                                      */
-#define NPROCS_X1 8
-#define NPROCS_X2 8
+#define NPROCS_X1 2
+#define NPROCS_X2 2
 
 /* Total number of points along the two lattice dimensions
  * NOTE: both NX1 and NX2 must be EVEN integers                                  */
@@ -65,7 +65,7 @@
 
 // Verbosity
 #define VERBOSE     true
-#define VERYVERBOSE false
+#define VERYVERBOSE true
 
 
 #endif  // PARAMETERS_HH

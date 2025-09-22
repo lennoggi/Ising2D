@@ -72,8 +72,11 @@ void init_rng_device(const int &rank,
 template <typename T> __global__
 void update_device_kernel(T   *rng_states_device,
                           int *local_lattice_device,
+                          const size_t imin,
+                          const size_t jmin,
                           const size_t nx,
                           const size_t ny,
+                          const size_t ypitch,
                                 int    *out_of_bounds_device_ptr);
 
 template <typename T>

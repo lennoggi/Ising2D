@@ -74,9 +74,9 @@ void update(const int                               &rank,
         const auto irecv_idx = irecv*nx2loc_p2;
 
         for (int kx2 = 0; kx2 < 2; ++kx2) {
-            const int sx2  = kx2*nx2loc_half;
-            const int jmin = sx2 + 1;
-            const int jmax = jmin + nx2loc_half;
+            const auto sx2  = kx2*nx2loc_half;
+            const auto jmin = sx2 + 1;
+            const auto jmax = jmin + nx2loc_half;
 
             // Update the current quarter of the process-local lattice
             for (auto i = decltype(imax){imin}; i < imax; ++i) {

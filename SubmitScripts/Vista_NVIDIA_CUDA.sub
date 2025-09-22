@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -A PHY20010
 #SBATCH -p gh-dev
-#SBATCH -t 00:05:00
-#SBATCH -N 1 -n 64
+#SBATCH -t 02:00:00
+#SBATCH -N 1 -n 4
 #SBATCH -J Ising2D_run
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=lorenzo.ennoggi@gmail.com

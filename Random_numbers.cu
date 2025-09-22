@@ -14,14 +14,14 @@ void init_rng_device_kernel(T *rng_states_device,
                             const size_t seed,
                             const size_t nx,  // nx1loc
                             const size_t ny,  // nx2loc
-                                  int    *out_of_bounds_device_ptr) {
+                                  int    *error_flag_device_ptr) {
     const auto i = blockIdx.x*blockDim.x + threadIdx.x;
     const auto j = blockIdx.y*blockDim.y + threadIdx.y;
 
     /* Capture out-of-bounds errors via an error flag
      * NOTE: no need to check if i<0 or j<0 because nx and ny are size_t        */
     if (i >= nx or j >= ny) {
-        atomicExch(out_of_bounds_device_ptr, 1);
+        atomicExch(error_flag_device_ptr, 1);
         return;
     }
 
@@ -41,7 +41,7 @@ init_rng_device_kernel<curandStatePhilox4_32_10_t>(curandStatePhilox4_32_10_t *r
                                                    const size_t seed,
                                                    const size_t nx,
                                                    const size_t ny,
-                                                         int    *out_of_bounds_device_ptr);
+                                                         int    *error_flag_device_ptr);
 
 
 
@@ -69,16 +69,16 @@ void init_rng_device(const int &rank,
 
     // No out-of-bounds errors to begin with
     int  out_of_bounds = 0;
-    int *out_of_bounds_device_ptr = allocate_device<int>(rank, 1);
-    copy_device<int>(rank, out_of_bounds_device_ptr, &out_of_bounds, 1, cudaMemcpyHostToDevice);
+    int *error_flag_device_ptr = allocate_device<int>(rank, 1);
+    copy_device<int>(rank, error_flag_device_ptr, &out_of_bounds, 1, cudaMemcpyHostToDevice);
 
-    init_rng_device_kernel<T><<<grid, block>>>(rng_states_device, seed, nx1loc, nx2loc, out_of_bounds_device_ptr);
+    init_rng_device_kernel<T><<<grid, block>>>(rng_states_device, seed, nx1loc, nx2loc, error_flag_device_ptr);
 
     CHECK_ERROR_CUDA(rank, cudaGetLastError());  // Capture potential errors from the kernel
     CHECK_ERROR_CUDA(rank, cudaDeviceSynchronize());
 
-    copy_device<int>(rank, &out_of_bounds, out_of_bounds_device_ptr, 1, cudaMemcpyDeviceToHost);
-    free_device(rank, out_of_bounds_device_ptr);
+    copy_device<int>(rank, &out_of_bounds, error_flag_device_ptr, 1, cudaMemcpyDeviceToHost);
+    free_device(rank, error_flag_device_ptr);
 
     if (out_of_bounds == 1) {
         ERROR(rank, "init_rng_device_kernel() returned out-of-bounds error");
