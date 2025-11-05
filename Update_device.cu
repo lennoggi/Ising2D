@@ -17,7 +17,7 @@ using namespace std;
  * kernel only knows it has to update a grid of points)
  * ======================================================================== */
 template <typename T> __global__
-void update_device_kernel(T      *rng_states_device,  // XXX: this doesn't have ghosts, so it must be indexed differently
+void update_device_kernel(T      *rng_states_device,
                           int *local_lattice_device,
                           const size_t imin,
                           const size_t jmin,
@@ -60,7 +60,7 @@ void update_device_kernel(T      *rng_states_device,  // XXX: this doesn't have 
           auto   rng_state        = rng_states_device[idx_rng];
     const double trial            = curand_uniform_double(&rng_state);
     rng_states_device[idx_rng]    = rng_state;  // Update the RNG state after curand_uniform_double() has modified it
-    local_lattice_device[idx_rng] = (trial < prob) ? 1 : -1;
+    local_lattice_device[ij] = (trial < prob) ? 1 : -1;
 
     return;
 }

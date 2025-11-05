@@ -5,6 +5,7 @@
 // XXX XXX XXX XXX XXX XXX
 // XXX XXX XXX XXX XXX XXX
 //#include <iostream>
+////#include <iomanip>
 // XXX XXX XXX XXX XXX XXX
 // XXX XXX XXX XXX XXX XXX
 // XXX XXX XXX XXX XXX XXX
@@ -39,6 +40,7 @@ void write_lattice(const int &rank,
     //    const auto i_idx = i*nx2loc_p2;
     //    for (auto j = decltype(nx2loc_p2){0}; j < nx2loc_p2; ++j) {
     //        cout << local_lattice.at(i_idx + j) << "\t";
+    //        //cout << setw(3) << setfill('0') << local_lattice.at(i_idx + j) << "\t";
     //    }
     //    cout << endl;
     //}
