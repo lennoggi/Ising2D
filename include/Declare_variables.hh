@@ -26,9 +26,6 @@ constexpr inline int nx2loc_p1 = nx2loc + 1;
 constexpr inline int nx1loc_p2 = nx1loc + 2;
 constexpr inline int nx2loc_p2 = nx2loc + 2;
 
-// Interior size of a quarter of the process-local lattice
-constexpr inline int nx1lochalf_nx2lochalf = nx1loc_half*nx2loc_half;
-
 // Total size (including ghost points) of the flattened process-local lattice
 constexpr inline int nx1locp2_nx2locp2 = nx1loc_p2*nx2loc_p2;
 
