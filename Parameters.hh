@@ -43,7 +43,7 @@
 
 
 // Number of lattice updates to reach thermal equilibrium
-#define NTHERM 200000
+#define NTHERM 10000
 
 /* Number of lattice updates during which the expectation values of all the
  * observables are computed after reaching thermal equilibrium                  */
@@ -57,7 +57,7 @@
 #define SAVE_LATTICE_CALC true
 
 // Output frequency
-#define OUT_EVERY 200000
+#define OUT_EVERY 10000
 
 
 // Whether to have one stdout and one stderr file per MPI rank

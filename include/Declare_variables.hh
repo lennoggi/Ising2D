@@ -8,15 +8,6 @@
 constexpr inline int nx1loc = NX1/NPROCS_X1;
 constexpr inline int nx2loc = NX2/NPROCS_X2;
 
-/* Both nx1loc=NX1/NPROCS_X1 and nx2loc=NX2LOC/NPROCS_X2 must be EVEN for the
- * parity update method to work (see Update.cc and Update_device.cu)            */
-static_assert(nx1loc % 2 == 0);
-static_assert(nx2loc % 2 == 0);
-
-// Size of the chunks of data to send to and receive from each process
-constexpr inline int nx1loc_half = nx1loc/2;
-constexpr inline int nx2loc_half = nx2loc/2;
-
 // Indices of the last ghost row and column on the process-local lattice
 constexpr inline int nx1loc_p1 = nx1loc + 1;
 constexpr inline int nx2loc_p1 = nx2loc + 1;
@@ -26,25 +17,29 @@ constexpr inline int nx2loc_p1 = nx2loc + 1;
 constexpr inline int nx1loc_p2 = nx1loc + 2;
 constexpr inline int nx2loc_p2 = nx2loc + 2;
 
+// Helper variable for communication
+constexpr inline int nx1loc_nx2loc = nx1loc*nx2loc;
+
 // Total size (including ghost points) of the flattened process-local lattice
 constexpr inline int nx1locp2_nx2locp2 = nx1loc_p2*nx2loc_p2;
 
-#ifdef USE_CUDA
-/* Launch the lattice update kernel on each quarter of the process-local lattice
- * using a single block if the quarter is small enough, or use multiple blocks
- * of MAX_BLOCK_SIZE_X1*MAX_BLOCK_SIZE_X2 threads each otherwise                */
-constexpr inline int block_size_x1 = std::min(nx1loc_half, MAX_BLOCK_SIZE_X1);
-constexpr inline int block_size_x2 = std::min(nx2loc_half, MAX_BLOCK_SIZE_X2);
-#endif
+/* Both nx1loc=NX1/NPROCS_X1 and nx2loc=NX2LOC/NPROCS_X2 must be EVEN for the
+ * parity update method to work (see Update.cc and Update_device.cu)
+ * Additionally, on GPUs, the update happens in a 'checkerboard' fashion,
+ * whereby all 'black' sites are updated first and all 'red' sites are updated
+ * next to preserve detailed balance (see Update_device.cu)                     */
+static_assert(nx1loc % 2 == 0);
+static_assert(nx2loc % 2 == 0);
+constexpr inline int nx1loc_div2 = nx1loc/2;
+constexpr inline int nx2loc_div2 = nx2loc/2;
 
-// Helper variables for communication
-//constexpr inline int nx1locp2_p1          = nx1loc + 3;
-constexpr inline int nx1loc_nx2loc        = nx1loc*nx2loc;
-//constexpr inline int nx1loc_nx2locp2_p1   = nx1loc_nx2loc + 3;
-//constexpr inline int nx1locp1_nx2locp2_p1 = nx1loc_nx2loc + 4;
-//constexpr inline int nx2locp2_p1          = nx2loc + 3;
-//constexpr inline int nx2locp2_p_nx2loc    = nx2loc_p2 + nx2loc;
-//constexpr inline int nx2locp2_p_nx2locp1  = nx2loc_p2 + nx2loc_p1;
+#ifdef USE_CUDA
+/* On GPUs, lattice sites are updated in a 'checkerboard' fashion, whereby all
+ * 'black' sites are updated first and all 'red' sites are updated next to
+ * preserve detailed balance (see Update_device.cu)                             */
+static_assert(nx2loc % 4 == 0);
+constexpr inline int nx2loc_div4 = nx2loc/4;
+#endif
 
 
 #endif  // DECLARATIONS_HH

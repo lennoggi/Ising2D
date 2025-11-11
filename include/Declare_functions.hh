@@ -77,6 +77,7 @@ void update_device_kernel(T   *rng_states_device,
                           const size_t nx,
                           const size_t ny,
                           const size_t ypitch,
+                          const bool   update_odd_sites,
                                 int    *out_of_bounds_device_ptr);
 
 template <typename T>

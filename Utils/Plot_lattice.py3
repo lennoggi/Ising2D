@@ -37,7 +37,7 @@ with h5py.File(infile, "r") as f:
         # XXX XXX XXX XXX XXX XXX
         # XXX XXX XXX XXX XXX XXX
         # XXX XXX XXX XXX XXX XXX
-        if dset_name == "Iteration_0" or dset_name == "Iteration_200000":
+        if dset_name == "Iteration_0" or dset_name == "Iteration_10000":
         # XXX XXX XXX XXX XXX XXX
         # XXX XXX XXX XXX XXX XXX
         # XXX XXX XXX XXX XXX XXX
