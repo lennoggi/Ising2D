@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
     const auto thermalize_time  = chrono::duration_cast<chrono::seconds>(thermalize_end - thermalize_start);
 
     #if (VERBOSE)
-    INFO(rank, "Lattice has reached thermal equilibrium");
+    INFO(rank, "Lattice has reached thermal equilibrium in " << thermalize_time.count() << " s");
     #endif
 
 
