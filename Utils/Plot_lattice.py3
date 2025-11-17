@@ -34,22 +34,15 @@ plotdir = args.plotdir
 # Plot
 with h5py.File(infile, "r") as f:
     for dset_name in sorted(list(f.keys()), key = extract_iteration):
-        # XXX XXX XXX XXX XXX XXX
-        # XXX XXX XXX XXX XXX XXX
-        # XXX XXX XXX XXX XXX XXX
-        if dset_name == "Iteration_0" or dset_name == "Iteration_10000":
-        # XXX XXX XXX XXX XXX XXX
-        # XXX XXX XXX XXX XXX XXX
-        # XXX XXX XXX XXX XXX XXX
-            dset  = f[dset_name]
-    
-            plt.figure(figsize = (8., 8.), dpi = 200)
-            plt.axis("off")
-            plt.imshow(dset, interpolation = "none", aspect = "equal",
-                       cmap = "plasma", vmin = -1, vmax = 1)
-            plt.tight_layout(pad = 0.)
-            figname = f"{plotdir}/{dset_name}.jpg"
-            plt.savefig(figname)
-            plt.close()
-    
-            print(f"File {figname} generated successfully")
+        dset  = f[dset_name]
+
+        plt.figure(figsize = (8., 8.), dpi = 200)
+        plt.axis("off")
+        plt.imshow(dset, interpolation = "none", aspect = "equal",
+                   cmap = "plasma", vmin = -1, vmax = 1)
+        plt.tight_layout(pad = 0.)
+        figname = f"{plotdir}/{dset_name}.jpg"
+        plt.savefig(figname)
+        plt.close()
+
+        print(f"File {figname} generated successfully")
