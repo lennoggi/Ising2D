@@ -15,8 +15,8 @@
 
 /* Total number of points along the two lattice dimensions
  * NOTE: both NX1 and NX2 must be EVEN integers                                  */
-#define NX1 128
-#define NX2 128
+#define NX1 2048
+#define NX2 2048
 
 
 /* The lattice update kernel is launched on each quarter of the process-local
