@@ -12,10 +12,10 @@ using namespace std;
 
 
 
-/* ========================================================================
- * Kernel updating the a quarter of the process-local lattice (however, the
- * kernel only knows it has to update a grid of points)
- * ======================================================================== */
+/* ===========================================================================
+ * Kernel updating a quarter of the process-local lattice (however, the kernel
+ * only knows it has to update a grid of points)
+ * =========================================================================== */
 template <typename T> __global__
 void update_device_kernel(T      *rng_states_device,
                           int *local_lattice_device,

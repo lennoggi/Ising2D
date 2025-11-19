@@ -11,11 +11,11 @@
 using namespace std;
 
 
-/* ============================================================================
- * Routine updating the process-local lattice by first sweeping only over "red"
- * sites, whose neighbors are all "black", and then sweeping only over "black"
- * sites, whose neighbors are all "red"
- * ============================================================================ */
+/* =========================================================================
+ * Routine updating the process-local lattice one quarter at a time, so that
+ * when a boundary spin is updated this info is immediately available to the
+ * neighboring process
+ * ========================================================================= */
 void update(const int                               &rank,
                   mt19937                           &gen,   // NOTE: can't be constant because dist changes the internal status of gen
                   uniform_real_distribution<double> &dist,  // NOTE: also non-const
