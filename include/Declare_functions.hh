@@ -11,10 +11,6 @@ std::array<int, 7>
 set_indices_neighbors_parity(const int &rank,
                              const int &nprocs);
 
-void exchange_ghosts(const int &rank,
-                     const std::array<int, 7> &indices_neighbors_parity,
-                           int *local_lattice);
-
 void update(const int                                    &rank,
                   std::mt19937                           &gen,
                   std::uniform_real_distribution<double> &dist,
