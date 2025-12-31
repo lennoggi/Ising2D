@@ -15,8 +15,8 @@
 
 /* Total number of points along the two lattice dimensions
  * NOTE: both NX1 and NX2 must be EVEN integers                                  */
-#define NX1 2048
-#define NX2 2048
+#define NX1 256
+#define NX2 256
 
 
 /* The lattice update kernel is launched on each quarter of the process-local
@@ -56,8 +56,8 @@
 // Whether to save lattice data during the calculation of the observables
 #define SAVE_LATTICE_CALC true
 
-// Output frequency
-#define OUT_EVERY 10000
+// Lattice output frequency
+#define LATTICE_OUT_EVERY 10000
 
 
 // Whether to have one stdout and one stderr file per MPI rank

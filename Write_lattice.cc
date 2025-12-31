@@ -98,7 +98,7 @@ void write_lattice(const int &rank,
         static_cast<hsize_t>(x2index*nx2loc)
     };  // The global lattice in the file has no ghosts and the offset reflects this
 
-    const auto &local_lattice_size_interior = mem_count;  // i.e. {nx1loc, nx2loc}, but this avoids building a new array
+    const auto &local_lattice_size_interior = mem_count;  // {nx1loc, nx2loc}
     CHECK_ERROR(rank, H5Sselect_hyperslab(fspace_id, H5S_SELECT_SET, offset.data(), nullptr, local_lattice_size_interior.data(), nullptr));
 
 

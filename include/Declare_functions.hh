@@ -17,6 +17,12 @@ void update(const int                                    &rank,
             const std::array<int, 7>                     &indices_neighbors_parity,
                   std::array<int, nx1locp2_nx2locp2>     &local_lattice);
 
+void calc_obs_corr(const int &rank,
+                   const std::array<int, nx1locp2_nx2locp2> &local_lattice,
+                   const hid_t &dset_mag_id,
+                   const hid_t &dset_energy_id,
+                   const hid_t &memspace_obs_id);
+
 void write_lattice(const int &rank,
                    const int &nprocs,
                    const int &x1index,

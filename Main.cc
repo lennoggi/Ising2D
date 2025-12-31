@@ -115,10 +115,10 @@ int main(int argc, char **argv) {
     CHECK_ERROR(rank, H5Pset_fapl_mpio(fapl_id, MPI_COMM_WORLD, MPI_INFO_NULL));
     CHECK_ERROR(rank, H5Pset_all_coll_metadata_ops(fapl_id, true));
 
-    const auto file_id = H5Fcreate("Lattice_global.h5", H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
-    assert(file_id >= 0);
+    const auto file_lattice_id = H5Fcreate("Lattice.h5", H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
+    assert(file_lattice_id >= 0);
 
-    write_lattice(rank, nprocs, x1index, x2index, 0, local_lattice, file_id);
+    write_lattice(rank, nprocs, x1index, x2index, 0, local_lattice, file_lattice_id);
 
 
     /* Initialize the seed of the random number generator, either on the host
@@ -149,19 +149,17 @@ int main(int argc, char **argv) {
 
     for (auto n = decltype(NTHERM){1}; n <= NTHERM; ++n) {
         #ifdef USE_CUDA
-        /* The update kernel only needs to see the INTERIOR of the process-local
-         * lattice, so pass nx1loc and nx2loc, not nx1loc_p2 and nx2loc_p2      */
         update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity, local_lattice_device);
         #else
         update(rank, gen, dist, indices_neighbors_parity, local_lattice);
         #endif
 
         #if (SAVE_LATTICE_THERM)
-        if (n % OUT_EVERY == 0) {
+        if (n % LATTICE_OUT_EVERY == 0) {
             #ifdef USE_CUDA
             copy_device(rank, local_lattice.data(), local_lattice_device, nx1locp2_nx2locp2, cudaMemcpyDeviceToHost);
             #endif
-            write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_id);
+            write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_lattice_id);
             #if (VERYVERBOSE)
             INFO(rank, "Iteration " << n << " written to file");
             #endif
@@ -169,21 +167,67 @@ int main(int argc, char **argv) {
         #endif
     }
 
-    const auto thermalize_end   = chrono::high_resolution_clock::now();
-    const auto thermalize_time  = chrono::duration_cast<chrono::seconds>(thermalize_end - thermalize_start);
+    const auto thermalize_end  = chrono::high_resolution_clock::now();
+    const auto thermalize_time = chrono::duration_cast<chrono::seconds>(thermalize_end - thermalize_start);
 
     #if (VERBOSE)
     INFO(rank, "Lattice has reached thermal equilibrium in " << thermalize_time.count() << " s");
     #endif
 
+    CHECK_ERROR(rank, H5Fclose(file_lattice_id));
 
-    // TODO TODO TODO TODO TODO TODO
-    // TODO TODO TODO TODO TODO TODO
-    // TODO TODO TODO TODO TODO TODO
-    // Compute observables
-    // TODO TODO TODO TODO TODO TODO
-    // TODO TODO TODO TODO TODO TODO
-    // TODO TODO TODO TODO TODO TODO
+
+    // Calculate observables and correlations across rows and columns
+    const auto file_obscorr_id = H5Fcreate("Observables_correlation.h5", H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
+    assert(file_obscorr_id >= 0);
+
+    constexpr  hsize_t ncalc = NCALC;
+    const auto fspace_obs_id = H5Screate_simple(1, &ncalc, nullptr);
+    assert(fspace_obs_id > 0);
+
+    const string dset_mag_name("/Magnetization");
+    const string dset_energy_name("/Energy");
+
+    auto dset_mag_id    = H5Dcreate(file_obscorr_id, dset_mag_name.c_str(),    H5T_NATIVE_DOUBLE,
+                                    fspace_obs_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto dset_energy_id = H5Dcreate(file_obscorr_id, dset_energy_name.c_str(), H5T_NATIVE_DOUBLE,
+                                    fspace_obs_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    assert(dset_mag_id    > 0);
+    assert(dset_energy_id > 0);
+
+    constexpr  hsize_t one     = 1;  // One value per iteration is written to the dataset
+    const auto memspace_obs_id = H5Screate_simple(1, &one, nullptr);
+    assert(memspace_obs_id > 0);
+
+    #if (VERBOSE)
+    INFO(rank, "Begin calculating observables and correlations across rows and columns");
+    #endif
+    const auto calc_obs_corr_start = chrono::high_resolution_clock::now();
+
+    for (auto n = decltype(NCALC){0}; n < NCALC; ++n) {
+        #ifdef USE_CUDA
+        // TODO: implement the calculation of observables and correlations on the GPU
+        ERROR(rank, "The calculation of observables and correlations across rows and columns is not yet implemented on GPUs, aborting");
+        //update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity, local_lattice_device);
+        #else
+        calc_obs_corr(rank, local_lattice, dset_mag_id, dset_energy_id, memspace_obs_id);
+        update(rank, gen, dist, indices_neighbors_parity, local_lattice);
+        #endif
+
+    }
+
+    const auto calc_obs_corr_end  = chrono::high_resolution_clock::now();
+    const auto calc_obs_corr_time = chrono::duration_cast<chrono::seconds>(calc_obs_corr_end - calc_obs_corr_start);
+
+    #if (VERBOSE)
+    INFO(rank, "Done calculating observables and correlations across rows and columns in " << calc_obs_corr_time.count() << " s");
+    #endif
+
+    CHECK_ERROR(rank, H5Dclose(dset_mag_id));
+    CHECK_ERROR(rank, H5Dclose(dset_energy_id));
+    CHECK_ERROR(rank, H5Sclose(fspace_obs_id));
+    CHECK_ERROR(rank, H5Fclose(file_obscorr_id));
+    CHECK_ERROR(rank, H5Pclose(fapl_id));
 
 
     #ifdef USE_CUDA
@@ -191,8 +235,6 @@ int main(int argc, char **argv) {
     free_device(rank, rng_states_device);
     #endif
 
-    CHECK_ERROR(rank, H5Fclose(file_id));
-    CHECK_ERROR(rank, H5Pclose(fapl_id));
     CHECK_ERROR(rank, MPI_Finalize());
 
     return 0;

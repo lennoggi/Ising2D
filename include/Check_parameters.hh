@@ -44,7 +44,7 @@ static_assert(NCALC  > 0);
 static_assert(SAVE_LATTICE_THERM or not SAVE_LATTICE_THERM);
 static_assert(SAVE_LATTICE_CALC  or not SAVE_LATTICE_CALC);
 
-static_assert(OUT_EVERY > 0);
+static_assert(LATTICE_OUT_EVERY > 0);
 
 static_assert(OUTERR_ALL_RANKS or not OUTERR_ALL_RANKS);
 

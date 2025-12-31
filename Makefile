@@ -26,7 +26,7 @@ endif
 
 
 # Objects to be built from regular C++ (not CUDA) source files
-OBJ = Indices_neighbors_parity.o Main.o Update.o Write_lattice.o
+OBJ = Indices_neighbors_parity.o Main.o Observables_correlation.o Update.o Write_lattice.o
 EXE = Ising2D_exe
 
 ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
@@ -47,6 +47,9 @@ Indices_neighbors_parity.o: Indices_neighbors_parity.cc Parameters.hh
 
 Main.o: Main.cc include/Check_parameters.hh include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -c Main.cc
+
+Observables_correlation.o: Observables_correlation.cc include/Declare_variables.hh include/Macros.hh
+	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -c Observables_correlation.cc
 
 Write_lattice.o: Write_lattice.cc include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -c Write_lattice.cc
