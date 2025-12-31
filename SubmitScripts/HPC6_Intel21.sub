@@ -1,0 +1,16 @@
+#!/bin/bash
+#PBS -A PHY20010
+#PBS -q cintest
+#PBS -l walltime=00:01:00
+#PBS -l select=1:ncpus=4:mpiprocs=4
+#PBS -N Ising2D_run
+#PBS -m abe
+#PBS -M lorenzo.ennoggi@gmail.com
+#PBS -o Ising2D_run.out
+#PBS -e Ising2D_run.err
+
+echo "Begin"
+date
+time mpiexec.hydra -np ${PBS_NP} ./Ising2D_exe
+echo "Done"
+date
