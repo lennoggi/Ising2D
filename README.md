@@ -21,7 +21,7 @@ Lorenzo Ennoggi (<le8016@rit.edu> / <lorenzo.ennoggi@gmail.com>)
 2. Compile
   - CPU
    ```
-   make -j4 options=OptionLists/<optionlist>
+   make -j5 options=OptionLists/<optionlist>
    ```
   - GPU
    ```

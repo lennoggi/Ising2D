@@ -177,6 +177,7 @@ int main(int argc, char **argv) {
     CHECK_ERROR(rank, H5Fclose(file_lattice_id));
 
 
+
     // Calculate observables and correlations across rows and columns
     const auto file_obscorr_id = H5Fcreate("Observables_correlation.h5", H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
     assert(file_obscorr_id >= 0);
@@ -185,12 +186,9 @@ int main(int argc, char **argv) {
     const auto fspace_obs_id = H5Screate_simple(1, &ncalc, nullptr);
     assert(fspace_obs_id > 0);
 
-    const string dset_mag_name("/Magnetization");
-    const string dset_energy_name("/Energy");
-
-    auto dset_mag_id    = H5Dcreate(file_obscorr_id, dset_mag_name.c_str(),    H5T_NATIVE_DOUBLE,
+    auto dset_mag_id    = H5Dcreate(file_obscorr_id, "/Magnetization", H5T_NATIVE_DOUBLE,
                                     fspace_obs_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto dset_energy_id = H5Dcreate(file_obscorr_id, dset_energy_name.c_str(), H5T_NATIVE_DOUBLE,
+    auto dset_energy_id = H5Dcreate(file_obscorr_id, "/Energy",       H5T_NATIVE_DOUBLE,
                                     fspace_obs_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     assert(dset_mag_id    > 0);
     assert(dset_energy_id > 0);
@@ -199,18 +197,46 @@ int main(int argc, char **argv) {
     const auto memspace_obs_id = H5Screate_simple(1, &one, nullptr);
     assert(memspace_obs_id > 0);
 
+
+    constexpr array<hsize_t, 2> dims_fspace_sums_rows{NCALC, NX1};
+    constexpr array<hsize_t, 2> dims_fspace_sums_cols{NCALC, NX2};
+
+    const auto fspace_sums_rows_id = H5Screate_simple(2, dims_fspace_sums_rows.data(), nullptr);
+    const auto fspace_sums_cols_id = H5Screate_simple(2, dims_fspace_sums_cols.data(), nullptr);
+    assert(fspace_sums_rows_id > 0);
+    assert(fspace_sums_cols_id > 0);
+
+    auto dset_sums_rows_id = H5Dcreate(file_obscorr_id, "/Spin sums along x1", H5T_NATIVE_INT,
+                                       fspace_sums_rows_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto dset_sums_cols_id = H5Dcreate(file_obscorr_id, "/Spin sums along x2", H5T_NATIVE_INT,
+                                       fspace_sums_cols_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    assert(dset_sums_rows_id > 0);
+    assert(dset_sums_cols_id > 0);
+
+    // One array per iteration is written to the dataset
+    constexpr array<hsize_t, 2> dims_memspace_sums_rows{1, NX1};
+    constexpr array<hsize_t, 2> dims_memspace_sums_cols{1, NX2};
+
+    const auto memspace_sums_rows_id = H5Screate_simple(2, dims_memspace_sums_rows.data(), nullptr);
+    const auto memspace_sums_cols_id = H5Screate_simple(2, dims_memspace_sums_cols.data(), nullptr);
+    assert(memspace_sums_rows_id > 0);
+    assert(memspace_sums_cols_id > 0);
+
+
     #if (VERBOSE)
     INFO(rank, "Begin calculating observables and correlations across rows and columns");
     #endif
     const auto calc_obs_corr_start = chrono::high_resolution_clock::now();
 
-    for (auto n = decltype(NCALC){0}; n < NCALC; ++n) {
+    for (hsize_t n = 0; n < ncalc; ++n) {
         #ifdef USE_CUDA
         // TODO: implement the calculation of observables and correlations on the GPU
         ERROR(rank, "The calculation of observables and correlations across rows and columns is not yet implemented on GPUs, aborting");
         //update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity, local_lattice_device);
         #else
-        calc_obs_corr(rank, local_lattice, dset_mag_id, dset_energy_id, memspace_obs_id);
+        calc_obs_corr(rank, local_lattice, n,
+                      dset_mag_id, dset_energy_id, memspace_obs_id,
+                      dset_sums_rows_id, dset_sums_cols_id, memspace_sums_rows_id, memspace_sums_cols_id);
         update(rank, gen, dist, indices_neighbors_parity, local_lattice);
         #endif
 
@@ -225,10 +251,19 @@ int main(int argc, char **argv) {
 
     CHECK_ERROR(rank, H5Dclose(dset_mag_id));
     CHECK_ERROR(rank, H5Dclose(dset_energy_id));
+    CHECK_ERROR(rank, H5Dclose(dset_sums_rows_id));
+    CHECK_ERROR(rank, H5Dclose(dset_sums_cols_id));
+
     CHECK_ERROR(rank, H5Sclose(fspace_obs_id));
+    CHECK_ERROR(rank, H5Sclose(fspace_sums_rows_id));
+    CHECK_ERROR(rank, H5Sclose(fspace_sums_cols_id));
+
+    CHECK_ERROR(rank, H5Sclose(memspace_obs_id));
+    CHECK_ERROR(rank, H5Sclose(memspace_sums_rows_id));
+    CHECK_ERROR(rank, H5Sclose(memspace_sums_cols_id));
+
     CHECK_ERROR(rank, H5Fclose(file_obscorr_id));
     CHECK_ERROR(rank, H5Pclose(fapl_id));
-
 
     #ifdef USE_CUDA
     free_device(rank, local_lattice_device);

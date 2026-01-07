@@ -48,7 +48,7 @@ void write_lattice(const int &rank,
     // XXX XXX XXX XXX XXX XXX
     // XXX XXX XXX XXX XXX XXX
 
-    const array<hsize_t, 2> dims_global = {NX1, NX2};
+    const array<hsize_t, 2> dims_global{NX1, NX2};
     const auto fspace_id = H5Screate_simple(2, dims_global.data(), nullptr);
     assert(fspace_id > 0);
 
@@ -63,13 +63,13 @@ void write_lattice(const int &rank,
 
     /* Create a memory dataspace representing the process-local lattice, which
      * has ghosts                                                               */
-    const array<hsize_t, 2> local_lattice_size_full = {nx1loc_p2, nx2loc_p2};  // Ghosts included
+    const array<hsize_t, 2> local_lattice_size_full{nx1loc_p2, nx2loc_p2};  // Ghosts included
     const auto memspace_id = H5Screate_simple(2, local_lattice_size_full.data(), nullptr);
     assert(memspace_id > 0);
 
     // Select the interior hyperslab from the process-local lattice
-    const array<hsize_t, 2> mem_start = {1, 1};
-    const array<hsize_t, 2> mem_count = {nx1loc, nx2loc};
+    const array<hsize_t, 2> mem_start{1, 1};
+    const array<hsize_t, 2> mem_count{nx1loc, nx2loc};
 
     CHECK_ERROR(rank, H5Sselect_hyperslab(memspace_id, H5S_SELECT_SET,
         mem_start.data(),
@@ -79,7 +79,7 @@ void write_lattice(const int &rank,
 
 
     /* Select the target hyperslab (i.e. the one corresponding to the
-     * current process) in the global lattice
+     * current process) within the global lattice (i.e., fspace)
      * NOTE: think of the full grid e.g. as:
      *        |----------------|
      *   ^  3 | 15 16 17 18 19 |  Example with NPROCS_X1=4, NPROCS_X2=5
@@ -93,7 +93,7 @@ void write_lattice(const int &rank,
      * NOTE: because in the HDF5 file row indices increase from top to bottom,
      *   while x1index increases in the reverse direction, the row offset must
      *   be flipped                                                             */
-    const array<hsize_t, 2> offset = {
+    const array<hsize_t, 2> offset{
         static_cast<hsize_t>((NPROCS_X1 - x1index - 1)*nx1loc),
         static_cast<hsize_t>(x2index*nx2loc)
     };  // The global lattice in the file has no ghosts and the offset reflects this
