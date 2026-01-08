@@ -178,10 +178,46 @@ int main(int argc, char **argv) {
 
 
 
-    // Calculate observables and correlations across rows and columns
+    /* --------------------------------------------------------------
+     * Calculate observables and correlations across rows and columns
+     * -------------------------------------------------------------- */
     const auto file_obscorr_id = H5Fcreate("Observables_correlation.h5", H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
     assert(file_obscorr_id >= 0);
 
+    // Write beta and lattice size to file
+    constexpr hsize_t one = 1;
+    constexpr hsize_t two = 2;
+
+    const auto space_one_id = H5Screate_simple(1, &one, nullptr);
+    const auto space_two_id = H5Screate_simple(1, &two, nullptr);
+    assert(space_one_id > 0);
+    assert(space_two_id > 0);
+
+    const auto dset_beta_id    = H5Dcreate(file_obscorr_id, "/Beta", H5T_NATIVE_DOUBLE,
+                                           space_one_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    const auto dset_latsize_id = H5Dcreate(file_obscorr_id, "/Lattice size", H5T_NATIVE_INT,
+                                           space_two_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    assert(dset_beta_id    > 0);
+    assert(dset_latsize_id > 0);
+
+    if (rank == 0) {
+        constexpr auto beta = BETA;
+        constexpr array<int, 2> latsize{NX1, NX2};
+
+        CHECK_ERROR(rank,
+            H5Dwrite(dset_beta_id,    H5T_NATIVE_DOUBLE,
+                     space_one_id, space_one_id, H5P_DEFAULT, &beta));
+        CHECK_ERROR(rank,
+            H5Dwrite(dset_latsize_id, H5T_NATIVE_INT,
+                     space_two_id, space_two_id, H5P_DEFAULT, latsize.data()));
+    }
+
+    CHECK_ERROR(rank, H5Dclose(dset_beta_id));
+    CHECK_ERROR(rank, H5Dclose(dset_latsize_id));
+    CHECK_ERROR(rank, H5Sclose(space_two_id));
+
+
+    // Set up writing magnetization and energy to file
     constexpr  hsize_t ncalc = NCALC;
     const auto fspace_obs_id = H5Screate_simple(1, &ncalc, nullptr);
     assert(fspace_obs_id > 0);
@@ -193,11 +229,8 @@ int main(int argc, char **argv) {
     assert(dset_mag_id    > 0);
     assert(dset_energy_id > 0);
 
-    constexpr  hsize_t one     = 1;  // One value per iteration is written to the dataset
-    const auto memspace_obs_id = H5Screate_simple(1, &one, nullptr);
-    assert(memspace_obs_id > 0);
 
-
+    // Set up writing spin sums over rows and columns and energy to file
     constexpr array<hsize_t, 2> dims_fspace_sums_rows{NCALC, NX1};
     constexpr array<hsize_t, 2> dims_fspace_sums_cols{NCALC, NX2};
 
@@ -213,7 +246,6 @@ int main(int argc, char **argv) {
     assert(dset_sums_rows_id > 0);
     assert(dset_sums_cols_id > 0);
 
-    // One array per iteration is written to the dataset
     constexpr array<hsize_t, 2> dims_memspace_sums_rows{1, NX1};
     constexpr array<hsize_t, 2> dims_memspace_sums_cols{1, NX2};
 
@@ -235,7 +267,7 @@ int main(int argc, char **argv) {
         //update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity, local_lattice_device);
         #else
         calc_obs_corr(rank, local_lattice, n,
-                      dset_mag_id, dset_energy_id, memspace_obs_id,
+                      dset_mag_id, dset_energy_id, space_one_id,
                       dset_sums_rows_id, dset_sums_cols_id, memspace_sums_rows_id, memspace_sums_cols_id);
         update(rank, gen, dist, indices_neighbors_parity, local_lattice);
         #endif
@@ -254,11 +286,12 @@ int main(int argc, char **argv) {
     CHECK_ERROR(rank, H5Dclose(dset_sums_rows_id));
     CHECK_ERROR(rank, H5Dclose(dset_sums_cols_id));
 
+    CHECK_ERROR(rank, H5Sclose(space_one_id));
+
     CHECK_ERROR(rank, H5Sclose(fspace_obs_id));
     CHECK_ERROR(rank, H5Sclose(fspace_sums_rows_id));
     CHECK_ERROR(rank, H5Sclose(fspace_sums_cols_id));
 
-    CHECK_ERROR(rank, H5Sclose(memspace_obs_id));
     CHECK_ERROR(rank, H5Sclose(memspace_sums_rows_id));
     CHECK_ERROR(rank, H5Sclose(memspace_sums_cols_id));
 
