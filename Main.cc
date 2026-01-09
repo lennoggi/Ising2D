@@ -239,9 +239,9 @@ int main(int argc, char **argv) {
     assert(fspace_sums_rows_id > 0);
     assert(fspace_sums_cols_id > 0);
 
-    auto dset_sums_rows_id = H5Dcreate(file_obscorr_id, "/Spin sums along x1", H5T_NATIVE_INT,
+    auto dset_sums_rows_id = H5Dcreate(file_obscorr_id, "/x1 spin sums", H5T_NATIVE_INT,
                                        fspace_sums_rows_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto dset_sums_cols_id = H5Dcreate(file_obscorr_id, "/Spin sums along x2", H5T_NATIVE_INT,
+    auto dset_sums_cols_id = H5Dcreate(file_obscorr_id, "/x2 spin sums", H5T_NATIVE_INT,
                                        fspace_sums_cols_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     assert(dset_sums_rows_id > 0);
     assert(dset_sums_cols_id > 0);
