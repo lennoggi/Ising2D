@@ -1,10 +1,12 @@
 #include <cassert>
+#include <cstring>
 #include <array>
 
 #include <mpi.h>
 
 #include "include/Declare_functions.hh"
 #include "include/Macros.hh"
+#include "Parameters.hh"
 
 using namespace std;
 
@@ -14,14 +16,11 @@ using namespace std;
  * ========================================================================= */
 void calc_obs_corr(const int &rank,
                    const array<int, nx1locp2_nx2locp2> &local_lattice,
-                   const hsize_t &n,
-                   const hid_t   &dset_mag_id,
-                   const hid_t   &dset_energy_id,
-                   const hid_t   &memspace_obs_id,
-                   const hid_t   &dset_sums_rows_id,
-                   const hid_t   &dset_sums_cols_id,
-                   const hid_t   &memspace_sums_rows_id,
-                   const hid_t   &memspace_sums_cols_id) {
+                   const hsize_t  &n,
+                   vector<double> &mag_vec,
+                   vector<double> &energy_vec,
+                   vector<int>    &sums_rows_vec,
+                   vector<int>    &sums_cols_vec) {
     // Calculate the observables and correlation
     int mag_loc    = 0;
     int energy_loc = 0;
@@ -86,64 +85,17 @@ void calc_obs_corr(const int &rank,
                    0, MPI_COMM_WORLD));
 
 
-    // Print the results to file from rank 0
+    // Update the output vectors
     if (rank == 0) {
-        /* Write data at the appropriate place for iteration n
-         * NOTE: getting a fresh new file space from the dataset at every
-         *   iteration is safer than re-using the original filespace through
-         *   multiple hyperslab selections                                      */
-        constexpr auto      ntot = NX1*NX2;
-        const double    mag_glob = static_cast<double>(obs_glob.at(0))/static_cast<double>(   ntot);
-        const double energy_glob = static_cast<double>(obs_glob.at(1))/static_cast<double>(2.*ntot);
+           mag_vec[n] = obs_glob[0];  // NOTE: division by   NX1*NX2 deferred to main()
+        energy_vec[n] = obs_glob[1];  // NOTE: division by 2*NX1*NX2 deferred to main()
 
-        const auto fspace_mag_id    = H5Dget_space(dset_mag_id);
-        const auto fspace_energy_id = H5Dget_space(dset_energy_id);
-        assert(fspace_mag_id    > 0);
-        assert(fspace_energy_id > 0);
+        constexpr auto size_of_int = sizeof(int);
+        constexpr auto nx1_ints    = NX1*size_of_int;
+        constexpr auto nx2_ints    = NX2*size_of_int;
 
-        constexpr hsize_t one = 1;
-
-        CHECK_ERROR(rank,
-            H5Sselect_hyperslab(fspace_mag_id,    H5S_SELECT_SET,
-                                &n, nullptr, &one, nullptr));
-        CHECK_ERROR(rank,
-            H5Sselect_hyperslab(fspace_energy_id, H5S_SELECT_SET,
-                                &n, nullptr, &one, nullptr));
-        CHECK_ERROR(rank,
-            H5Dwrite(dset_mag_id, H5T_NATIVE_DOUBLE,
-                     memspace_obs_id, fspace_mag_id,    H5P_DEFAULT, &mag_glob));
-        CHECK_ERROR(rank,
-            H5Dwrite(dset_energy_id, H5T_NATIVE_DOUBLE,
-                     memspace_obs_id, fspace_energy_id, H5P_DEFAULT, &energy_glob));
-
-        CHECK_ERROR(rank, H5Sclose(fspace_mag_id));
-        CHECK_ERROR(rank, H5Sclose(fspace_energy_id));
-
-
-        const auto fspace_sums_rows_id = H5Dget_space(dset_sums_rows_id);
-        const auto fspace_sums_cols_id = H5Dget_space(dset_sums_cols_id);
-        assert(fspace_sums_rows_id > 0);
-        assert(fspace_sums_cols_id > 0);
-
-        const     array<hsize_t, 2> start_sums_rows_cols{n, 0};
-        constexpr array<hsize_t, 2> count_sums_rows{1, NX1};
-        constexpr array<hsize_t, 2> count_sums_cols{1, NX2};
-
-        CHECK_ERROR(rank,
-            H5Sselect_hyperslab(fspace_sums_rows_id, H5S_SELECT_SET,
-                                start_sums_rows_cols.data(), nullptr, count_sums_rows.data(), nullptr));
-        CHECK_ERROR(rank,
-            H5Sselect_hyperslab(fspace_sums_cols_id, H5S_SELECT_SET,
-                                start_sums_rows_cols.data(), nullptr, count_sums_cols.data(), nullptr));
-        CHECK_ERROR(rank,
-            H5Dwrite(dset_sums_rows_id, H5T_NATIVE_INT,
-                     memspace_sums_rows_id, fspace_sums_rows_id, H5P_DEFAULT, sums_rows_glob.data()));
-        CHECK_ERROR(rank,
-            H5Dwrite(dset_sums_cols_id, H5T_NATIVE_INT,
-                     memspace_sums_cols_id, fspace_sums_cols_id, H5P_DEFAULT, sums_cols_glob.data()));
-
-        CHECK_ERROR(rank, H5Sclose(fspace_sums_rows_id));
-        CHECK_ERROR(rank, H5Sclose(fspace_sums_cols_id));
+        memcpy(sums_rows_vec.data() + n*NX1, sums_rows_glob.data(), nx1_ints);
+        memcpy(sums_cols_vec.data() + n*NX2, sums_cols_glob.data(), nx2_ints);
     }
 
     return;

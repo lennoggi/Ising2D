@@ -2,8 +2,11 @@
 #define DECLARE_FUNCTIONS_HH
 
 #include <array>
+#include <vector>
 #include <random>
+
 #include <hdf5.h>
+
 #include "Declare_variables.hh"
 
 
@@ -20,13 +23,10 @@ void update(const int                                    &rank,
 void calc_obs_corr(const int &rank,
                    const std::array<int, nx1locp2_nx2locp2> &local_lattice,
                    const hsize_t &n,
-                   const hid_t   &dset_mag_id,
-                   const hid_t   &dset_energy_id,
-                   const hid_t   &memspace_obs_id,
-                   const hid_t   &dset_sums_rows_id,
-                   const hid_t   &dset_sums_cols_id,
-                   const hid_t   &memspace_sums_rows_id,
-                   const hid_t   &memspace_sums_cols_id);
+                   std::vector<double> &mag_vec,
+                   std::vector<double> &energy_vec,
+                   std::vector<int>    &sums_rows_vec,
+                   std::vector<int>    &sums_cols_vec);
 
 void write_lattice(const int &rank,
                    const int &nprocs,

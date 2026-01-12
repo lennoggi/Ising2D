@@ -140,10 +140,8 @@ int main(int argc, char **argv) {
 
 
     // Let the lattice thermalize
-    #if (VERBOSE)
     INFO(rank, "beta = " << BETA);
     INFO(rank, "Begin lattice thermalization");
-    #endif
 
     const auto thermalize_start = chrono::high_resolution_clock::now();
 
@@ -160,19 +158,21 @@ int main(int argc, char **argv) {
             copy_device(rank, local_lattice.data(), local_lattice_device, nx1locp2_nx2locp2, cudaMemcpyDeviceToHost);
             #endif
             write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_lattice_id);
-            #if (VERYVERBOSE)
-            INFO(rank, "Iteration " << n << " written to file");
+            #if (VERBOSE)
+            INFO(rank, "Thermalization step " << n << ": lattice written to file");
             #endif
         }
+        #endif
+
+        #if (VERYVERBOSE)
+        INFO(rank, "Thermalization step " << n << " complete");
         #endif
     }
 
     const auto thermalize_end  = chrono::high_resolution_clock::now();
     const auto thermalize_time = chrono::duration_cast<chrono::seconds>(thermalize_end - thermalize_start);
 
-    #if (VERBOSE)
     INFO(rank, "Lattice has reached thermal equilibrium in " << thermalize_time.count() << " s");
-    #endif
 
     CHECK_ERROR(rank, H5Fclose(file_lattice_id));
 
@@ -181,6 +181,58 @@ int main(int argc, char **argv) {
     /* --------------------------------------------------------------
      * Calculate observables and correlations across rows and columns
      * -------------------------------------------------------------- */
+    INFO(rank, "Begin calculating observables and correlations across rows and columns");
+
+    /* Potentially very large => Allocate on the heap
+     * NOTE: only allocated by the master process, which is the only one writing
+     *       to file                                                            */
+    vector<double> mag_vec, energy_vec;
+    vector<int>    sums_rows_vec, sums_cols_vec;
+
+    if (rank == 0) {
+              mag_vec.resize(NCALC);
+           energy_vec.resize(NCALC);
+        sums_rows_vec.resize(NCALC*NX1);
+        sums_cols_vec.resize(NCALC*NX2);
+    }
+
+    const auto calc_obs_corr_start = chrono::high_resolution_clock::now();
+
+    for (hsize_t n = 0; n < NCALC; ++n) {
+        #ifdef USE_CUDA
+        // TODO: implement the calculation of observables and correlations on the GPU
+        ERROR(rank, "The calculation of observables and correlations across rows and columns is not yet implemented on GPUs, aborting");
+        //update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity, local_lattice_device);
+        #else
+        calc_obs_corr(rank, local_lattice, n,
+                      mag_vec, energy_vec, sums_rows_vec, sums_cols_vec);
+        update(rank, gen, dist, indices_neighbors_parity, local_lattice);
+        #endif
+        #if (VERYVERBOSE)
+        INFO(rank, "Calculation step " << n << " complete");
+        #endif
+    }
+
+    if (rank == 0) {
+        constexpr double   ntot_inv = 1./static_cast<double>(NX1*NX2);
+        constexpr double _2ntot_inv = 0.5*ntot_inv;
+
+        for (auto n = decltype(NCALC){0}; n < NCALC; ++n) {
+               mag_vec[n] *=   ntot_inv;
+            energy_vec[n] *= _2ntot_inv;
+        }
+    }
+
+    const auto calc_obs_corr_end  = chrono::high_resolution_clock::now();
+    const auto calc_obs_corr_time = chrono::duration_cast<chrono::seconds>(calc_obs_corr_end - calc_obs_corr_start);
+
+    INFO(rank, "Done calculating observables and correlations across rows and columns in " << calc_obs_corr_time.count() << " s");
+
+
+
+    /* ------------------
+     * Write data to file
+     * ------------------ */
     const auto file_obscorr_id = H5Fcreate("Observables_correlation.h5", H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
     assert(file_obscorr_id >= 0);
 
@@ -214,87 +266,70 @@ int main(int argc, char **argv) {
 
     CHECK_ERROR(rank, H5Dclose(dset_beta_id));
     CHECK_ERROR(rank, H5Dclose(dset_latsize_id));
+
+    CHECK_ERROR(rank, H5Sclose(space_one_id));
     CHECK_ERROR(rank, H5Sclose(space_two_id));
 
 
-    // Set up writing magnetization and energy to file
+    // Write the observables to file
     constexpr  hsize_t ncalc = NCALC;
-    const auto fspace_obs_id = H5Screate_simple(1, &ncalc, nullptr);
-    assert(fspace_obs_id > 0);
+    const auto space_obs_id  = H5Screate_simple(1, &ncalc, nullptr);
+    assert(space_obs_id > 0);
 
     auto dset_mag_id    = H5Dcreate(file_obscorr_id, "/Magnetization", H5T_NATIVE_DOUBLE,
-                                    fspace_obs_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+                                    space_obs_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     auto dset_energy_id = H5Dcreate(file_obscorr_id, "/Energy",       H5T_NATIVE_DOUBLE,
-                                    fspace_obs_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+                                    space_obs_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     assert(dset_mag_id    > 0);
     assert(dset_energy_id > 0);
 
-
-    // Set up writing spin sums over rows and columns and energy to file
-    constexpr array<hsize_t, 2> dims_fspace_sums_rows{NCALC, NX1};
-    constexpr array<hsize_t, 2> dims_fspace_sums_cols{NCALC, NX2};
-
-    const auto fspace_sums_rows_id = H5Screate_simple(2, dims_fspace_sums_rows.data(), nullptr);
-    const auto fspace_sums_cols_id = H5Screate_simple(2, dims_fspace_sums_cols.data(), nullptr);
-    assert(fspace_sums_rows_id > 0);
-    assert(fspace_sums_cols_id > 0);
-
-    auto dset_sums_rows_id = H5Dcreate(file_obscorr_id, "/x1 spin sums", H5T_NATIVE_INT,
-                                       fspace_sums_rows_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto dset_sums_cols_id = H5Dcreate(file_obscorr_id, "/x2 spin sums", H5T_NATIVE_INT,
-                                       fspace_sums_cols_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    assert(dset_sums_rows_id > 0);
-    assert(dset_sums_cols_id > 0);
-
-    constexpr array<hsize_t, 2> dims_memspace_sums_rows{1, NX1};
-    constexpr array<hsize_t, 2> dims_memspace_sums_cols{1, NX2};
-
-    const auto memspace_sums_rows_id = H5Screate_simple(2, dims_memspace_sums_rows.data(), nullptr);
-    const auto memspace_sums_cols_id = H5Screate_simple(2, dims_memspace_sums_cols.data(), nullptr);
-    assert(memspace_sums_rows_id > 0);
-    assert(memspace_sums_cols_id > 0);
-
-
-    #if (VERBOSE)
-    INFO(rank, "Begin calculating observables and correlations across rows and columns");
-    #endif
-    const auto calc_obs_corr_start = chrono::high_resolution_clock::now();
-
-    for (hsize_t n = 0; n < ncalc; ++n) {
-        #ifdef USE_CUDA
-        // TODO: implement the calculation of observables and correlations on the GPU
-        ERROR(rank, "The calculation of observables and correlations across rows and columns is not yet implemented on GPUs, aborting");
-        //update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity, local_lattice_device);
-        #else
-        calc_obs_corr(rank, local_lattice, n,
-                      dset_mag_id, dset_energy_id, space_one_id,
-                      dset_sums_rows_id, dset_sums_cols_id, memspace_sums_rows_id, memspace_sums_cols_id);
-        update(rank, gen, dist, indices_neighbors_parity, local_lattice);
-        #endif
-
+    if (rank == 0) {
+        CHECK_ERROR(rank,
+            H5Dwrite(dset_mag_id, H5T_NATIVE_DOUBLE,
+                     space_obs_id, space_obs_id, H5P_DEFAULT, mag_vec.data()));
+        CHECK_ERROR(rank,
+            H5Dwrite(dset_energy_id, H5T_NATIVE_DOUBLE,
+                     space_obs_id, space_obs_id, H5P_DEFAULT, energy_vec.data()));
     }
-
-    const auto calc_obs_corr_end  = chrono::high_resolution_clock::now();
-    const auto calc_obs_corr_time = chrono::duration_cast<chrono::seconds>(calc_obs_corr_end - calc_obs_corr_start);
-
-    #if (VERBOSE)
-    INFO(rank, "Done calculating observables and correlations across rows and columns in " << calc_obs_corr_time.count() << " s");
-    #endif
 
     CHECK_ERROR(rank, H5Dclose(dset_mag_id));
     CHECK_ERROR(rank, H5Dclose(dset_energy_id));
+    CHECK_ERROR(rank, H5Sclose(space_obs_id));
+
+
+    // Write the spin sums over rows and columns to file
+    constexpr array<hsize_t, 2> dims_space_sums_rows{NCALC, NX1};
+    constexpr array<hsize_t, 2> dims_space_sums_cols{NCALC, NX2};
+
+    const auto space_sums_rows_id = H5Screate_simple(2, dims_space_sums_rows.data(), nullptr);
+    const auto space_sums_cols_id = H5Screate_simple(2, dims_space_sums_cols.data(), nullptr);
+    assert(space_sums_rows_id > 0);
+    assert(space_sums_cols_id > 0);
+
+    auto dset_sums_rows_id = H5Dcreate(file_obscorr_id, "/x1 spin sums", H5T_NATIVE_INT,
+                                       space_sums_rows_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto dset_sums_cols_id = H5Dcreate(file_obscorr_id, "/x2 spin sums", H5T_NATIVE_INT,
+                                       space_sums_cols_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    assert(dset_sums_rows_id > 0);
+    assert(dset_sums_cols_id > 0);
+
+    if (rank == 0) {
+        CHECK_ERROR(rank,
+            H5Dwrite(dset_sums_rows_id, H5T_NATIVE_INT,
+                     space_sums_rows_id, space_sums_rows_id, H5P_DEFAULT, sums_rows_vec.data()));
+        CHECK_ERROR(rank,
+            H5Dwrite(dset_sums_cols_id, H5T_NATIVE_INT,
+                     space_sums_cols_id, space_sums_cols_id, H5P_DEFAULT, sums_cols_vec.data()));
+    }
+
     CHECK_ERROR(rank, H5Dclose(dset_sums_rows_id));
     CHECK_ERROR(rank, H5Dclose(dset_sums_cols_id));
 
-    CHECK_ERROR(rank, H5Sclose(space_one_id));
+    CHECK_ERROR(rank, H5Sclose(space_sums_rows_id));
+    CHECK_ERROR(rank, H5Sclose(space_sums_cols_id));
 
-    CHECK_ERROR(rank, H5Sclose(fspace_obs_id));
-    CHECK_ERROR(rank, H5Sclose(fspace_sums_rows_id));
-    CHECK_ERROR(rank, H5Sclose(fspace_sums_cols_id));
 
-    CHECK_ERROR(rank, H5Sclose(memspace_sums_rows_id));
-    CHECK_ERROR(rank, H5Sclose(memspace_sums_cols_id));
-
+    // Finalize
     CHECK_ERROR(rank, H5Fclose(file_obscorr_id));
     CHECK_ERROR(rank, H5Pclose(fapl_id));
 
@@ -303,6 +338,7 @@ int main(int argc, char **argv) {
     free_device(rank, rng_states_device);
     #endif
 
+    INFO(rank, "All done");
     CHECK_ERROR(rank, MPI_Finalize());
 
     return 0;
