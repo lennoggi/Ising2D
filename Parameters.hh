@@ -54,7 +54,7 @@
 #define SAVE_LATTICE_THERM true
 
 // Whether to save lattice data during the calculation of the observables
-#define SAVE_LATTICE_CALC true
+#define SAVE_LATTICE_CALC false
 
 // Lattice output frequency
 #define LATTICE_OUT_EVERY NTHERM

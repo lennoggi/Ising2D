@@ -91,7 +91,8 @@ template <typename T>
 void update_device(const int &rank,
                          T   *rng_states_device,
                    const array<int, 7> &indices_neighbors_parity,
-                         int *local_lattice_device) {
+                         int *local_lattice_device,
+                         int *error_flag_device_ptr) {
     const auto &[x1index, x2index, x1down, x1up, x2down, x2up, parity] = indices_neighbors_parity;
 
     /* Arrays encoding which processes rows (i.e. x data chunks) and columns
@@ -164,16 +165,10 @@ void update_device(const int &rank,
             dim3 block(block_size_x1, block_size_x2);
 
             // Shape of the CUDA block grid
-            constexpr int grid_size_x1_quarter = std::ceil(nx1loc_div2/block_size_x1);
-            constexpr int grid_size_x2_quarter = std::ceil(nx2loc_div4/block_size_x2);
-            dim3 grid(grid_size_x1_quarter, grid_size_x2_quarter);
-            //dim3 grid((nx1loc_div2 + block.x - 1)/block.x,   // block.x == block_size_x1
-            //          (nx2loc_div2 + block.y - 1)/block.y);  // block.y == block_size_x2
+            dim3 grid(static_cast<int>((nx1loc_div2 + block.x - 1)/block.x),   // block.x == block_size_x1
+                      static_cast<int>((nx2loc_div4 + block.y - 1)/block.y));  // block.y == block_size_x2
 
-            // No out-of-bounds errors to begin with
-            int  out_of_bounds = 0;
-            int *error_flag_device_ptr = allocate_device<int>(rank, 1);
-            copy_device<int>(rank, error_flag_device_ptr, &out_of_bounds, 1, cudaMemcpyHostToDevice);
+            set_int_device(rank, error_flag_device_ptr, 0, 1);  // Set one element to 0
 
 
             /* Update every other site---so that all four neighbors either have
@@ -187,10 +182,10 @@ void update_device(const int &rank,
                                                   update_odd_sites,
                                                   error_flag_device_ptr);
 
-            // Capture potential errors from the kernel
             CHECK_ERROR_CUDA(rank, cudaGetLastError());
             CHECK_ERROR_CUDA(rank, cudaDeviceSynchronize());
 
+            int out_of_bounds = 0;
             copy_device<int>(rank, &out_of_bounds, error_flag_device_ptr, 1, cudaMemcpyDeviceToHost);
 
             if (out_of_bounds != 0) {
@@ -206,12 +201,11 @@ void update_device(const int &rank,
                                                   update_odd_sites,
                                                   error_flag_device_ptr);
 
-            // Capture potential errors from the kernel
             CHECK_ERROR_CUDA(rank, cudaGetLastError());
             CHECK_ERROR_CUDA(rank, cudaDeviceSynchronize());
 
+            out_of_bounds = 0;
             copy_device<int>(rank, &out_of_bounds, error_flag_device_ptr, 1, cudaMemcpyDeviceToHost);
-            free_device(rank, error_flag_device_ptr);
 
             if (out_of_bounds != 0) {
                 ERROR(rank, "update_device_kernel() returned out-of-bounds error (quarter ("
@@ -247,8 +241,9 @@ void update_device(const int &rank,
                 cudaMemcpyDeviceToDevice);
 
             /* Exchange the current quarter's ghosts
-             * NOTE: this assumes a GPU-aware MPI implementation, since
-             *   MPI_Send() and MPI_Recv() must be able to handle GPU pointers  */
+             * NOTE: this assumes the MPI implementation in use is GPU-aware,
+             *       i.e., MPI_Send() and MPI_Recv() must be able to handle GPU
+             *       pointers  */
             if (parity) {
                 CHECK_ERROR(rank, MPI_Send(&local_lattice_device[isend_idx_psx2_p1], nx2loc_div2, MPI_INT, x1send.at(count), tag1, MPI_COMM_WORLD));
                 CHECK_ERROR(rank, MPI_Recv(&local_lattice_device[irecv_idx_psx2_p1], nx2loc_div2, MPI_INT, x1recv.at(count), tag2, MPI_COMM_WORLD, MPI_STATUS_IGNORE));
@@ -289,4 +284,5 @@ template void
 update_device<curandStatePhilox4_32_10_t>(const int &rank,
                                           curandStatePhilox4_32_10_t *rng_states_device,
                                           const array<int, 7> &indices_neighbors_parity,
-                                                int    *local_lattice_device);
+                                                int *local_lattice_device,
+                                                int *error_flag_device_ptr);

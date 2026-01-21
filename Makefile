@@ -30,7 +30,7 @@ OBJ = Indices_neighbors_parity.o Main.o Observables_correlation.o Update.o Write
 EXE = Ising2D_exe
 
 ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
-OBJ += Random_numbers.o Utils.o Update_device.o
+OBJ += Cast_and_scale_two_device.o Observables_correlation_device.o Random_numbers.o Utils.o Update_device.o
 endif
 
 
@@ -58,6 +58,12 @@ Update.o: Update.cc include/Declare_variables.hh include/Declare_functions.hh in
 	$(CXX) $(CXXFLAGS) $(CXX_OPTIMIZE_FLAGS) $(CXX_WARN_FLAGS) $(CXX_DEBUG_FLAGS) -I$(HDF5_INC_DIR) -c Update.cc
 
 ifneq (,$(findstring -DUSE_CUDA,$(CXXFLAGS)))
+Cast_and_scale_two_device.o: Cast_and_scale_two_device.cu include/Macros.hh
+	$(CUCC) $(CUCC_FLAGS) -I$(HDF5_INC_DIR) -c Cast_and_scale_two_device.cu
+
+Observables_correlation_device.o: Observables_correlation_device.cu include/Declare_variables.hh include/Declare_functions.hh include/Macros.hh Parameters.hh
+	$(CUCC) $(CUCC_FLAGS) -I$(HDF5_INC_DIR) -c Observables_correlation_device.cu
+
 Random_numbers.o: Random_numbers.cu include/Declare_functions.hh include/Macros.hh
 	$(CUCC) $(CUCC_FLAGS) -I$(HDF5_INC_DIR) -c Random_numbers.cu
 
@@ -78,4 +84,4 @@ endif
 # NOTE: icpx generates *.o.tmp files which should be removed when cleaning
 .PHONY : clean
 clean:
-	${RM} ${EXE} ${OBJ} Random_numbers.o Utils.o Update_device.o *.o.tmp
+	${RM} ${EXE} ${OBJ} Cast_and_scale_two_device.o Observables_correlation_device.o Random_numbers.o Utils.o Update_device.o *.o.tmp

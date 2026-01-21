@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
     // XXX: cudaMemcpyHostToDevice can only be understood by nvc++.
     //      Modify copy_device() to pass a keyword or enum parameter which
     //      internally sets the CUDA memcpy kind.
-    copy_device(rank, local_lattice_device, local_lattice.data(), nx1locp2_nx2locp2, cudaMemcpyHostToDevice);
+    copy_device<int>(rank, local_lattice_device, local_lattice.data(), nx1locp2_nx2locp2, cudaMemcpyHostToDevice);
     // XXX XXX XXX XXX XXX XXX
     // XXX XXX XXX XXX XXX XXX
     // XXX XXX XXX XXX XXX XXX
@@ -131,8 +131,9 @@ int main(int argc, char **argv) {
     #ifdef USE_CUDA
     /* One RNG per INTERIOR lattice site, since on the GPU the update step
      * happens ~simultaneously for all points within the process-local lattice  */
+    int *error_flag_device_ptr = allocate_device<int>(rank, 1);
     curandStatePhilox4_32_10_t *rng_states_device = allocate_device<curandStatePhilox4_32_10_t>(rank, nx1loc_nx2loc);
-    init_rng_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, seed);
+    init_rng_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, seed, error_flag_device_ptr);
     #else
     mt19937 gen(seed);
     uniform_real_distribution<double> dist(0., 1.);
@@ -147,7 +148,8 @@ int main(int argc, char **argv) {
 
     for (auto n = decltype(NTHERM){1}; n <= NTHERM; ++n) {
         #ifdef USE_CUDA
-        update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity, local_lattice_device);
+        update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity,
+                                                  local_lattice_device, error_flag_device_ptr);
         #else
         update(rank, gen, dist, indices_neighbors_parity, local_lattice);
         #endif
@@ -155,10 +157,10 @@ int main(int argc, char **argv) {
         #if (SAVE_LATTICE_THERM)
         if (n % LATTICE_OUT_EVERY == 0) {
             #ifdef USE_CUDA
-            copy_device(rank, local_lattice.data(), local_lattice_device, nx1locp2_nx2locp2, cudaMemcpyDeviceToHost);
+            copy_device<int>(rank, local_lattice.data(), local_lattice_device, nx1locp2_nx2locp2, cudaMemcpyDeviceToHost);
             #endif
             write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_lattice_id);
-            #if (VERBOSE)
+            #if (VERYVERBOSE)
             INFO(rank, "Thermalization step " << n << ": lattice written to file");
             #endif
         }
@@ -183,44 +185,173 @@ int main(int argc, char **argv) {
      * -------------------------------------------------------------- */
     INFO(rank, "Begin calculating observables and correlations across rows and columns");
 
-    /* Potentially very large => Allocate on the heap
-     * NOTE: only allocated by the master process, which is the only one writing
-     *       to file                                                            */
-    vector<double> mag_vec, energy_vec;
-    vector<int>    sums_rows_vec, sums_cols_vec;
+    /* Potentially very large arrays => Allocate on the heap
+     * Only allocate buffers on the master process, which is the only one
+     * writing to file                                                          */
+    #ifdef USE_CUDA
+    int    *mag_energy_vec_int_device;
+    double *mag_vec_device, *energy_vec_device;
+    int    *sums_x1_vec_device, *sums_x2_vec_device;
 
     if (rank == 0) {
-              mag_vec.resize(NCALC);
-           energy_vec.resize(NCALC);
-        sums_rows_vec.resize(NCALC*NX1);
-        sums_cols_vec.resize(NCALC*NX2);
+        mag_energy_vec_int_device = allocate_device<int>   (rank, static_cast<size_t>(NCALC*2));
+                   mag_vec_device = allocate_device<double>(rank, static_cast<size_t>(NCALC));
+                energy_vec_device = allocate_device<double>(rank, static_cast<size_t>(NCALC));
+               sums_x1_vec_device = allocate_device<int>   (rank, static_cast<size_t>(NCALC*NX1));
+               sums_x2_vec_device = allocate_device<int>   (rank, static_cast<size_t>(NCALC*NX2));
     }
+    #else
+    vector<int> sums_x1_loc(nx1loc);
+    vector<int> sums_x2_loc(nx2loc);
+
+    vector<int> mag_energy_vec_int;
+
+    if (rank == 0) {
+        mag_energy_vec_int.resize(NCALC*2);
+    }
+    #endif
+
+    vector<double> mag_vec, energy_vec;
+    vector<int>    sums_x1_vec, sums_x2_vec;
+
+    if (rank == 0) {
+            mag_vec.resize(NCALC);
+         energy_vec.resize(NCALC);
+        sums_x1_vec.resize(NCALC*NX1);
+        sums_x2_vec.resize(NCALC*NX2);
+    }
+
+
+    /* Set up MPI communicators to reduce spin sums over rows and columns
+     * NOTE: comm_x1 (comm_x2) contains all the MPI processes with the same
+     *       x1index (x2index)                                                */
+    MPI_Comm comm_x1, comm_x2;
+
+    CHECK_ERROR(rank,
+        MPI_Comm_split(MPI_COMM_WORLD, x1index, x2index, &comm_x1));
+    CHECK_ERROR(rank,
+        MPI_Comm_split(MPI_COMM_WORLD, x2index, x1index, &comm_x2));
+
+    int rank_x1, rank_x2;  // Ranks in comm_x1 and comm_x2
+    MPI_Comm_rank(comm_x1, &rank_x1);
+    MPI_Comm_rank(comm_x2, &rank_x2);
+
+    #ifdef USE_CUDA
+    int *obs_loc_device     = allocate_device<int>(rank, 2);
+    int *sums_x1_loc_device = allocate_device<int>(rank, nx1loc);
+    int *sums_x2_loc_device = allocate_device<int>(rank, nx2loc);
+
+    int *sums_x1_loc_reduced_device, *sums_x2_loc_reduced_device;
+
+    if (x2index == 0) {
+        sums_x1_loc_reduced_device = allocate_device<int>(rank, nx1loc);
+    }
+
+    if (x1index == 0) {
+        sums_x2_loc_reduced_device = allocate_device<int>(rank, nx2loc);
+    }
+
+    #else
+    vector<int> sums_x1_loc_reduced, sums_x2_loc_reduced;
+    if (x2index == 0) {
+        sums_x1_loc_reduced.resize(nx1loc);
+    }
+    if (x1index == 0) {
+        sums_x2_loc_reduced.resize(nx2loc);
+    }
+    #endif
+
 
     const auto calc_obs_corr_start = chrono::high_resolution_clock::now();
 
     for (hsize_t n = 0; n < NCALC; ++n) {
         #ifdef USE_CUDA
-        // TODO: implement the calculation of observables and correlations on the GPU
-        ERROR(rank, "The calculation of observables and correlations across rows and columns is not yet implemented on GPUs, aborting");
-        //update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity, local_lattice_device);
+        calc_obs_corr_device(rank, local_lattice_device, n,
+                             x1index, x2index, rank_x1, rank_x2, comm_x1, comm_x2,
+                             obs_loc_device, sums_x1_loc_device, sums_x2_loc_device,
+                             sums_x1_loc_reduced_device, sums_x2_loc_reduced_device,
+                             mag_energy_vec_int_device, sums_x1_vec_device, sums_x2_vec_device,
+                             error_flag_device_ptr);
+        update_device<curandStatePhilox4_32_10_t>(rank, rng_states_device, indices_neighbors_parity,
+                                                  local_lattice_device, error_flag_device_ptr);
         #else
         calc_obs_corr(rank, local_lattice, n,
-                      mag_vec, energy_vec, sums_rows_vec, sums_cols_vec);
+                      x1index, x2index, rank_x1, rank_x2, comm_x1, comm_x2,
+                      sums_x1_loc, sums_x2_loc,
+                      sums_x1_loc_reduced, sums_x2_loc_reduced,
+                      mag_energy_vec_int, sums_x1_vec, sums_x2_vec);
         update(rank, gen, dist, indices_neighbors_parity, local_lattice);
         #endif
+
+        #if (SAVE_LATTICE_CALC)
+        if (n % LATTICE_OUT_EVERY == 0) {
+            #ifdef USE_CUDA
+            copy_device<int>(rank, local_lattice.data(), local_lattice_device, nx1locp2_nx2locp2, cudaMemcpyDeviceToHost);
+            #endif
+            write_lattice(rank, nprocs, x1index, x2index, n, local_lattice, file_lattice_id);
+            #if (VERYVERBOSE)
+            INFO(rank, "Thermalization step " << n << ": lattice written to file");
+            #endif
+        }
+        #endif
+
         #if (VERYVERBOSE)
         INFO(rank, "Calculation step " << n << " complete");
         #endif
     }
 
+    CHECK_ERROR(rank, MPI_Comm_free(&comm_x1));
+    CHECK_ERROR(rank, MPI_Comm_free(&comm_x2));
+
+    #ifdef USE_CUDA
+    free_device(rank,     obs_loc_device);
+    free_device(rank, sums_x1_loc_device);
+    free_device(rank, sums_x2_loc_device);
+
+    if (x2index == 0) {
+        free_device(rank, sums_x1_loc_reduced_device);
+    }
+
+    if (x1index == 0) {
+        free_device(rank, sums_x2_loc_reduced_device);
+    }
+
+    free_device(rank, error_flag_device_ptr);
+    #endif
+
+
     if (rank == 0) {
         constexpr double   ntot_inv = 1./static_cast<double>(NX1*NX2);
         constexpr double _2ntot_inv = 0.5*ntot_inv;
 
+        #ifdef USE_CUDA
+        /* Copy the integer buffer 'mag_energy_vec_int_device' into a couple of
+         * double precision buffers ('mag_vec_device' and 'energy_vec_device')
+         * and scale these quantities by the lattice volume                     */
+        cast_and_scale_two_device<int, double>(rank,
+            mag_energy_vec_int_device,         // Input buffer   (size: 2*NCALC)
+            mag_vec_device, energy_vec_device, // Output buffers (size:   NCALC)
+            ntot_inv, _2ntot_inv,              // Scaling values for magnetization and energy (in this order)
+            NCALC);
+
+        copy_device<double>(rank,    mag_vec.data(),    mag_vec_device, static_cast<size_t>(NCALC), cudaMemcpyDeviceToHost);
+        copy_device<double>(rank, energy_vec.data(), energy_vec_device, static_cast<size_t>(NCALC), cudaMemcpyDeviceToHost);
+
+        copy_device<int>(rank, sums_x1_vec.data(), sums_x1_vec_device, static_cast<size_t>(NCALC*NX1), cudaMemcpyDeviceToHost);
+        copy_device<int>(rank, sums_x2_vec.data(), sums_x2_vec_device, static_cast<size_t>(NCALC*NX2), cudaMemcpyDeviceToHost);
+
+        free_device(rank, mag_energy_vec_int_device);
+        free_device(rank, mag_vec_device);
+        free_device(rank, energy_vec_device);
+        free_device(rank, sums_x1_vec_device);
+        free_device(rank, sums_x2_vec_device);
+        #else
         for (auto n = decltype(NCALC){0}; n < NCALC; ++n) {
-               mag_vec[n] *=   ntot_inv;
-            energy_vec[n] *= _2ntot_inv;
+            const auto _2n = 2*n;
+               mag_vec[n] = static_cast<double>(mag_energy_vec_int[_2n])   * ntot_inv;
+            energy_vec[n] = static_cast<double>(mag_energy_vec_int[_2n+1]) *  _2ntot_inv;
         }
+        #endif
     }
 
     const auto calc_obs_corr_end  = chrono::high_resolution_clock::now();
@@ -298,35 +429,35 @@ int main(int argc, char **argv) {
 
 
     // Write the spin sums over rows and columns to file
-    constexpr array<hsize_t, 2> dims_space_sums_rows{NCALC, NX1};
-    constexpr array<hsize_t, 2> dims_space_sums_cols{NCALC, NX2};
+    constexpr array<hsize_t, 2> dims_space_sums_x1{NCALC, NX1};
+    constexpr array<hsize_t, 2> dims_space_sums_x2{NCALC, NX2};
 
-    const auto space_sums_rows_id = H5Screate_simple(2, dims_space_sums_rows.data(), nullptr);
-    const auto space_sums_cols_id = H5Screate_simple(2, dims_space_sums_cols.data(), nullptr);
-    assert(space_sums_rows_id > 0);
-    assert(space_sums_cols_id > 0);
+    const auto space_sums_x1_id = H5Screate_simple(2, dims_space_sums_x1.data(), nullptr);
+    const auto space_sums_x2_id = H5Screate_simple(2, dims_space_sums_x2.data(), nullptr);
+    assert(space_sums_x1_id > 0);
+    assert(space_sums_x2_id > 0);
 
-    auto dset_sums_rows_id = H5Dcreate(file_obscorr_id, "/x1 spin sums", H5T_NATIVE_INT,
-                                       space_sums_rows_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    auto dset_sums_cols_id = H5Dcreate(file_obscorr_id, "/x2 spin sums", H5T_NATIVE_INT,
-                                       space_sums_cols_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    assert(dset_sums_rows_id > 0);
-    assert(dset_sums_cols_id > 0);
+    auto dset_sums_x1_id = H5Dcreate(file_obscorr_id, "/x1 spin sums", H5T_NATIVE_INT,
+                                     space_sums_x1_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    auto dset_sums_x2_id = H5Dcreate(file_obscorr_id, "/x2 spin sums", H5T_NATIVE_INT,
+                                     space_sums_x2_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    assert(dset_sums_x1_id > 0);
+    assert(dset_sums_x2_id > 0);
 
     if (rank == 0) {
         CHECK_ERROR(rank,
-            H5Dwrite(dset_sums_rows_id, H5T_NATIVE_INT,
-                     space_sums_rows_id, space_sums_rows_id, H5P_DEFAULT, sums_rows_vec.data()));
+            H5Dwrite(dset_sums_x1_id, H5T_NATIVE_INT,
+                     space_sums_x1_id, space_sums_x1_id, H5P_DEFAULT, sums_x1_vec.data()));
         CHECK_ERROR(rank,
-            H5Dwrite(dset_sums_cols_id, H5T_NATIVE_INT,
-                     space_sums_cols_id, space_sums_cols_id, H5P_DEFAULT, sums_cols_vec.data()));
+            H5Dwrite(dset_sums_x2_id, H5T_NATIVE_INT,
+                     space_sums_x2_id, space_sums_x2_id, H5P_DEFAULT, sums_x2_vec.data()));
     }
 
-    CHECK_ERROR(rank, H5Dclose(dset_sums_rows_id));
-    CHECK_ERROR(rank, H5Dclose(dset_sums_cols_id));
+    CHECK_ERROR(rank, H5Dclose(dset_sums_x1_id));
+    CHECK_ERROR(rank, H5Dclose(dset_sums_x2_id));
 
-    CHECK_ERROR(rank, H5Sclose(space_sums_rows_id));
-    CHECK_ERROR(rank, H5Sclose(space_sums_cols_id));
+    CHECK_ERROR(rank, H5Sclose(space_sums_x1_id));
+    CHECK_ERROR(rank, H5Sclose(space_sums_x2_id));
 
 
     // Finalize

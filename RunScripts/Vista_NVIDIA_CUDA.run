@@ -2,7 +2,7 @@
 
 set -e
 
-simdir="/scratch/07825/lennoggi/Ising2D_run_beta0.42_2048_2048_CUDA"
+simdir="/scratch/07825/lennoggi/Ising2D_run_beta0.42_256_256_CUDA"
 submitscript="Vista_NVIDIA_CUDA.sub"
 submit_cmd="sbatch"
 

@@ -29,6 +29,10 @@ template int*
 allocate_device<int>(const int    &rank,
                      const size_t &size);
 
+template double*
+allocate_device<double>(const int    &rank,
+                        const size_t &size);
+
 template curandStatePhilox4_32_10_t*
 allocate_device<curandStatePhilox4_32_10_t>(const int    &rank,
                                             const size_t &size);
@@ -54,6 +58,28 @@ copy_device<int>(const int    &rank,
                        int    *src,
                  const size_t &num_elements,
                  const cudaMemcpyKind &copy_kind);
+
+template void
+copy_device<double>(const int    &rank,
+                          double *dest,
+                          double *src,
+                    const size_t &num_elements,
+                    const cudaMemcpyKind &copy_kind);
+
+
+
+/* ===========================================
+ * Wrapper routine around cudaMemset()
+ * NOTE: cudaMemset() only sets integer values
+ * =========================================== */
+void set_int_device(const int   &rank,
+                          int   *device_ptr,
+                    const int   &value,
+                   const size_t &num_elements) {
+    CHECK_ERROR_CUDA(rank, cudaMemset(reinterpret_cast<void*>(device_ptr), value,
+                                      num_elements*sizeof(int)));
+    return;
+}
 
 
 
