@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+simdir="/leonardo_scratch/large/userinternal/lennogg1/Ising2D_run_beta0.42_256_256_CUDA_DEBUG"
+submitscript="Leonardo_HPCX_CUDA.sub"
+submit_cmd="sbatch"
+
+mkdir ${simdir}
+cp ../Ising2D_exe ${simdir}
+cp ../SubmitScripts/${submitscript} ${simdir}
+cp ../Parameters.hh ${simdir}
+cd ${simdir}
+${submit_cmd} ${submitscript}
+
+echo ""
+echo "Job submitted successfully"
+echo ""

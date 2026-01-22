@@ -1,0 +1,19 @@
+#!/bin/bash
+#SBATCH -A cin_staff
+#SBATCH -p dcgp_usr_prod
+#SBATCH --qos=dcgp_qos_dbg
+#SBATCH -t 00:05:00
+#SBATCH -N 1 -n 4
+#SBATCH --mem=0
+#SBATCH -J Ising2D_run
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=lorenzo.ennoggi@gmail.com
+#SBATCH -o Ising2D_run.out
+#SBATCH -e Ising2D_run.err
+
+echo "Begin"
+date
+time srun ./Ising2D_exe
+##time srun -l vtune -quiet -collect hpc-performance -trace-mpi -result-dir vtune_analysis ./Ising2D_exe
+echo "Done"
+date
