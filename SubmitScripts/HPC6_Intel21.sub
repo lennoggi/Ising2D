@@ -1,16 +1,24 @@
+# ============================================================================
+# NOTE: because on HPC6 the login and compute nodes differ, always compile the
+#       code on a compute node via an INTERACTIVE JOB (qsub -I)
+# ============================================================================
 #!/bin/bash
-#PBS -A PHY20010
-#PBS -q cintest
-#PBS -l walltime=00:01:00
-#PBS -l select=1:ncpus=4:mpiprocs=4
+#PBS -q agipGPU
+#PBS -l walltime=00:30:00
+#PBS -l select=1:ncpus=4:mpiprocs=4:mem=450gb
 #PBS -N Ising2D_run
 #PBS -m abe
 #PBS -M lorenzo.ennoggi@gmail.com
 #PBS -o Ising2D_run.out
 #PBS -e Ising2D_run.err
 
+ml intel-oneapi-compilers/2024.2.1
+ml intel-oneapi-mpi/2021.14.0-oneapi-2024.2.1-hip-6.1.2-c44bwwa
+ml hdf5/1.14.5-oneapi-2024.2.1-intel-oneapi-mpi-2021.14.0-hip-6.1.2-6mtthfw
+
+cd ${PBS_O_WORKDIR}
 echo "Begin"
 date
-time mpiexec.hydra -np ${PBS_NP} ./Ising2D_exe
+time mpiexec.hydra ${PBS_O_WORKDIR}/Ising2D_exe
 echo "Done"
 date
