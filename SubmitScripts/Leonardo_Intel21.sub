@@ -11,6 +11,12 @@
 #SBATCH -o Ising2D_run.out
 #SBATCH -e Ising2D_run.err
 
+# =========================================================
+# Refer to Pitagora's documentation at
+#   https://docs.hpc.cineca.it/hpc/leonardo.html
+# for partition (-p) and quality of service (--qos) options
+# =========================================================
+
 echo "Begin"
 date
 time srun ./Ising2D_exe
